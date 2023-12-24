@@ -15,7 +15,9 @@ func main() {
 		panic(err)
 	}
 
-	pauseCh := make(chan bool)
+	fmt.Println("Press any key to pause/resume the progress bar...")
+
+	pauseCh := make(chan bool, 1)
 	stopCh := make(chan bool)
 
 	// synchronise progress bar
@@ -33,22 +35,21 @@ func main() {
 }
 
 func progressBarWorker(pauseCh, stopCh chan bool, wg *sync.WaitGroup) {
-	n := 100
+	n := 5000
 	bar := progressbar.Default(int64(n))
 
 	for i := 0; i < n; i++ {
 		select {
 		case <-pauseCh:
-			<-pauseCh // sleeps until signal
+			<-pauseCh
 		case <-stopCh:
 			wg.Done()
 			return
 		default:
 			bar.Add(1)
-			time.Sleep(40 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 		}
 	}
-
 	wg.Done()
 }
 
@@ -61,7 +62,6 @@ func checkKeys(pauseCh, stopCh chan bool) {
 	for {
 		select {
 		case <-stopCh:
-			fmt.Println("**Exiting keys thread.")
 			return
 		case event := <-keysEvents:
 			if event.Err != nil {
@@ -69,6 +69,7 @@ func checkKeys(pauseCh, stopCh chan bool) {
 			}
 			fmt.Printf("You pressed: rune %q, key %X\r\n", event.Rune, event.Key)
 			if event.Key == keyboard.KeyEsc {
+				fmt.Println("Exiting loop!")
 				stopCh <- true
 			} else {
 				pauseCh <- true
