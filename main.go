@@ -1,50 +1,89 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/eiannone/keyboard"
+	"github.com/manifoldco/promptui"
 	"github.com/schollz/progressbar/v3"
 )
 
+func greeting() {
+	fmt.Println(`# Welcome to task-tracker-cli
+To exit press ^C.`)
+}
+
+func promptTaskTime() int {
+
+	validate := func(input string) error {
+		_, err := strconv.Atoi(input)
+
+		// Check for conversion error
+		if err != nil {
+			return errors.New("Invalid number")
+		}
+		return nil
+	}
+
+	prompt := promptui.Prompt{
+		Label:    "Enter task time (milliseconds)",
+		Validate: validate,
+	}
+
+	result, err := prompt.Run()
+
+	if err != nil {
+		fmt.Printf("Prompt failed %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("You choose %q\n", result)
+
+	n, err := strconv.Atoi(result)
+	if err != nil {
+		log.Fatalln("Could not convert string to int : " + result)
+	}
+
+	return n
+}
+
 func main() {
+	greeting()
+
 	err := keyboard.Open()
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Press any key to pause/resume the progress bar...")
+	n := promptTaskTime()
 
 	pauseCh := make(chan bool, 1)
-	stopCh := make(chan bool)
 
-	// synchronise progress bar
+	// synchronise progress bar and exit key
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go progressBarWorker(pauseCh, stopCh, &wg)
-	go checkKeys(pauseCh, stopCh)
+	go progressBarWorker(n, pauseCh, &wg)
+	go checkKeys(pauseCh, &wg)
 
-	// wait for progress bar to complete
 	wg.Wait()
 
-	stopCh <- true // signal keychecker to exit
 	keyboard.Close()
 }
 
-func progressBarWorker(pauseCh, stopCh chan bool, wg *sync.WaitGroup) {
-	n := 5000
+func progressBarWorker(n int, pauseCh chan bool, wg *sync.WaitGroup) {
 	bar := progressbar.Default(int64(n))
 
 	for i := 0; i < n; i++ {
 		select {
 		case <-pauseCh:
 			<-pauseCh
-		case <-stopCh:
-			wg.Done()
-			return
 		default:
 			bar.Add(1)
 			time.Sleep(1 * time.Millisecond)
@@ -53,7 +92,7 @@ func progressBarWorker(pauseCh, stopCh chan bool, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func checkKeys(pauseCh, stopCh chan bool) {
+func checkKeys(pauseCh chan bool, wg *sync.WaitGroup) {
 	keysEvents, err := keyboard.GetKeys(10)
 	if err != nil {
 		panic(err)
@@ -61,16 +100,15 @@ func checkKeys(pauseCh, stopCh chan bool) {
 
 	for {
 		select {
-		case <-stopCh:
-			return
 		case event := <-keysEvents:
 			if event.Err != nil {
 				panic(event.Err)
 			}
-			fmt.Printf("You pressed: rune %q, key %X\r\n", event.Rune, event.Key)
-			if event.Key == keyboard.KeyEsc {
-				fmt.Println("Exiting loop!")
-				stopCh <- true
+
+			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc || event.Rune == 'q' {
+				fmt.Println("\nExiting!")
+				wg.Done()
+				return
 			} else {
 				pauseCh <- true
 			}
