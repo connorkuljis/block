@@ -1,2 +1,9 @@
+all: build run
+
+build:
+	go build -o main
+
 run:
-	go run .
+	./main
+
+

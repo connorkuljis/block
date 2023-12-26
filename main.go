@@ -2,27 +2,58 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/eiannone/keyboard"
+	"github.com/connorkuljis/task-tracker-cli/models"
 	"github.com/manifoldco/promptui"
-	"github.com/schollz/progressbar/v3"
 )
 
-func greeting() {
-	fmt.Println(`# Welcome to task-tracker-cli
-To exit press ^C.`)
+type Options struct {
+	minutes float64
 }
 
-func promptTaskTime() int {
+func main() {
+	greeting()
 
+	options := parseFlags()
+
+	minutes := options.minutes
+	if options.minutes == 0 {
+		minutes = askMinutes()
+	}
+
+	startTimer(minutes)
+
+}
+
+func parseFlags() Options {
+	options := Options{}
+
+	var minutes float64
+
+	flag.Float64Var(&minutes, "minutes", 0, "Number of minutes")
+
+	flag.Parse()
+
+	options.minutes = float64(minutes)
+
+	return options
+}
+
+func greeting() {
+	fmt.Println("# Welcome to task-tracker-cli #")
+}
+
+func askMinutes() float64 {
 	validate := func(input string) error {
-		_, err := strconv.Atoi(input)
+		_, err := strconv.ParseFloat(input, 64)
 
 		// Check for conversion error
 		if err != nil {
@@ -32,7 +63,7 @@ func promptTaskTime() int {
 	}
 
 	prompt := promptui.Prompt{
-		Label:    "Enter task time (milliseconds)",
+		Label:    "Enter task time (minutes)",
 		Validate: validate,
 	}
 
@@ -45,73 +76,60 @@ func promptTaskTime() int {
 
 	fmt.Printf("You choose %q\n", result)
 
-	n, err := strconv.Atoi(result)
+	n, err := strconv.ParseFloat(result, 32)
 	if err != nil {
-		log.Fatalln("Could not convert string to int : " + result)
+		log.Fatalln("Could not convert string to float: " + result)
 	}
 
 	return n
 }
 
-func main() {
-	greeting()
+func startTimer(minutes float64) {
+	go say(fmt.Sprintf("Starting a timer for %.0f minutes.", minutes))
 
-	err := keyboard.Open()
+	blocker := models.NewBlocker()
+
+	n, err := blocker.Block()
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
-	n := promptTaskTime()
+	fmt.Printf(">> Distractions blocked. (%d bytes updated)\n", n)
+
+	startTime := time.Now()
+	fmt.Println("Start: " + startTime.Format("3:04:05pm"))
+
+	var wg sync.WaitGroup // synchronise progress bar and key checker
+	wg.Add(1)             // if any routine is done, both are done
 
 	pauseCh := make(chan bool, 1)
+	exitCh := make(chan bool, 1)
 
-	// synchronise progress bar and exit key
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go progressBarWorker(n, pauseCh, &wg)
-	go checkKeys(pauseCh, &wg)
+	go models.ProgressBarWorker(minutes, pauseCh, exitCh, &wg)
+	go models.CheckKeysWorker(pauseCh, exitCh, &wg)
 
 	wg.Wait()
 
-	keyboard.Close()
-}
+	endTime := time.Now()
+	duration := time.Now().Sub(startTime)
 
-func progressBarWorker(n int, pauseCh chan bool, wg *sync.WaitGroup) {
-	bar := progressbar.Default(int64(n))
+	fmt.Printf("End: " + endTime.Format("3:04:05pm"))
+	fmt.Printf(" [duration: %d hours, %d minutes, %d seconds.]\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
 
-	for i := 0; i < n; i++ {
-		select {
-		case <-pauseCh:
-			<-pauseCh
-		default:
-			bar.Add(1)
-			time.Sleep(1 * time.Millisecond)
-		}
-	}
-	wg.Done()
-}
-
-func checkKeys(pauseCh chan bool, wg *sync.WaitGroup) {
-	keysEvents, err := keyboard.GetKeys(10)
+	n, err = blocker.Unblock()
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
-	for {
-		select {
-		case event := <-keysEvents:
-			if event.Err != nil {
-				panic(event.Err)
-			}
+	fmt.Printf(">> Blocker disabled. (%d bytes updated)\n", n)
 
-			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc || event.Rune == 'q' {
-				fmt.Println("\nExiting!")
-				wg.Done()
-				return
-			} else {
-				pauseCh <- true
-			}
-		}
+	say("Goodbye")
+}
+
+func say(msg string) {
+	cmd := exec.Command("say", "-v", "Bubbles", msg)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println(err.Error())
 	}
 }
