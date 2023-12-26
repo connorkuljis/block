@@ -1,112 +1,69 @@
 package main
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
-	"strconv"
 	"sync"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/models"
-	"github.com/manifoldco/promptui"
+	"github.com/spf13/cobra"
 )
 
-type Options struct {
-	minutes float64
+var (
+	minutes        float64
+	disableBlocker bool
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "block",
+	Short: "Block removes distractions when you work on tasks.",
+	Long: `Block saves you time by blocking websites at IP level.
+		Progress bar is displayed directly in the terminal.
+		Automatically unblock sites when the task is complete.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("# Welcome to task-tracker-cli #")
+
+		if disableBlocker {
+			startTask(minutes)
+		} else {
+			blocker := NewBlocker()
+			blocker.Start()
+			startTask(minutes)
+			blocker.Stop()
+		}
+
+		say("Goodbye")
+	},
+}
+
+func init() {
+	rootCmd.PersistentFlags().Float64VarP(&minutes, "minutes", "m", 28.0, "Task duration in minutes.")
+	rootCmd.PersistentFlags().BoolVarP(&disableBlocker, "disable-blocker", "d", false, "Disable blocker.")
 }
 
 func main() {
-	greeting()
-
-	options := parseFlags()
-
-	minutes := options.minutes
-	if options.minutes == 0 {
-		minutes = askMinutes()
-	}
-
-	startTimer(minutes)
-
-}
-
-func parseFlags() Options {
-	options := Options{}
-
-	var minutes float64
-
-	flag.Float64Var(&minutes, "minutes", 0, "Number of minutes")
-
-	flag.Parse()
-
-	options.minutes = float64(minutes)
-
-	return options
-}
-
-func greeting() {
-	fmt.Println("# Welcome to task-tracker-cli #")
-}
-
-func askMinutes() float64 {
-	validate := func(input string) error {
-		_, err := strconv.ParseFloat(input, 64)
-
-		// Check for conversion error
-		if err != nil {
-			return errors.New("Invalid number")
-		}
-		return nil
-	}
-
-	prompt := promptui.Prompt{
-		Label:    "Enter task time (minutes)",
-		Validate: validate,
-	}
-
-	result, err := prompt.Run()
-
+	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-
-	fmt.Printf("You choose %q\n", result)
-
-	n, err := strconv.ParseFloat(result, 32)
-	if err != nil {
-		log.Fatalln("Could not convert string to float: " + result)
-	}
-
-	return n
 }
 
-func startTimer(minutes float64) {
+func startTask(minutes float64) {
 	go say(fmt.Sprintf("Starting a timer for %.0f minutes.", minutes))
-
-	blocker := models.NewBlocker()
-
-	n, err := blocker.Block()
-	if err != nil {
-		log.Println(err)
-	}
-
-	fmt.Printf(">> Distractions blocked. (%d bytes updated)\n", n)
 
 	startTime := time.Now()
 	fmt.Println("Start: " + startTime.Format("3:04:05pm"))
 
-	var wg sync.WaitGroup // synchronise progress bar and key checker
-	wg.Add(1)             // if any routine is done, both are done
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
 	pauseCh := make(chan bool, 1)
-	exitCh := make(chan bool, 1)
+	cancelCh := make(chan bool, 1)
+	finishCh := make(chan bool, 1)
 
-	go models.ProgressBarWorker(minutes, pauseCh, exitCh, &wg)
-	go models.CheckKeysWorker(pauseCh, exitCh, &wg)
+	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)
+	go PollInput(pauseCh, cancelCh, finishCh, &wg)
 
 	wg.Wait()
 
@@ -114,16 +71,7 @@ func startTimer(minutes float64) {
 	duration := time.Now().Sub(startTime)
 
 	fmt.Printf("End: " + endTime.Format("3:04:05pm"))
-	fmt.Printf(" [duration: %d hours, %d minutes, %d seconds.]\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
-
-	n, err = blocker.Unblock()
-	if err != nil {
-		log.Println(err)
-	}
-
-	fmt.Printf(">> Blocker disabled. (%d bytes updated)\n", n)
-
-	say("Goodbye")
+	fmt.Printf(", %dh, %dm, %ds\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
 }
 
 func say(msg string) {

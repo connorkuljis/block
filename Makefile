@@ -1,9 +1,10 @@
-all: build run
-
 build:
-	go build -o main
+	go build -o block
 
 run:
-	./main
+	./block
+
+clean:
+	rm ./block
 
 
