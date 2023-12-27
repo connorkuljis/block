@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -24,7 +24,8 @@ var rootCmd = &cobra.Command{
 		Progress bar is displayed directly in the terminal.
 		Automatically unblock sites when the task is complete.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("# Welcome to task-tracker-cli #")
+		fmt.Println("# Welcome to task-tracker-cli")
+		fmt.Println()
 
 		if disableBlocker {
 			startTask(minutes)
@@ -66,7 +67,7 @@ func startTask(minutes float64) {
 
 	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)
 	go PollInput(pauseCh, cancelCh, finishCh, &wg)
-	go recordScreen(cancelCh, finishCh, &wg)
+	go recordScreen(minutes, cancelCh, finishCh, &wg)
 
 	wg.Wait()
 
@@ -85,29 +86,36 @@ func say(msg string) {
 	}
 }
 
-func recordScreen(cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	volume := "."
+func recordScreen(minutes float64, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings"
+	filetype := ".mkv"
 
-	currentTime := time.Now()
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
 
-	timestamp := currentTime.Format("2006-01-02_15-04-05")
+	filename := filepath.Join(recordingsDir, timestamp) + filetype
 
-	file := filepath.Join(volume, timestamp) + ".mp4"
+	cmd := exec.Command("ffmpeg",
+		"-f", "avfoundation",
+		"-i", "1:0",
+		"-pix_fmt", "yuv420p",
+		"-r", "25",
+		filename,
+	)
 
-	cmd := exec.Command("screencapture", "-v", file)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	cmd.Start()
+	fmt.Println("Starting screen capture")
+	err := cmd.Start()
+	if err != nil {
+		panic(err)
+	}
 
 	select {
 	case <-cancelCh:
-		wg.Done()
-		return
+		cmd.Process.Signal(syscall.SIGTERM)
 	case <-finishCh:
-		cmd.Wait()
-		wg.Done()
-		return
+		cmd.Process.Signal(syscall.SIGTERM)
 	}
+
+	fmt.Println("\nScreen capture saved to: " + filename)
+	wg.Done()
+	return
 }
