@@ -23,7 +23,7 @@ func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, w
 		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
 	}
 
-	ticksPerSeconds := 60
+	ticksPerSeconds := 15
 	interval := 1000 / ticksPerSeconds
 	max := calculateTotalTicks(minutes, interval)
 

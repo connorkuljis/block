@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -56,7 +58,7 @@ func startTask(minutes float64) {
 	fmt.Println("Start: " + startTime.Format("3:04:05pm"))
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(3)
 
 	pauseCh := make(chan bool, 1)
 	cancelCh := make(chan bool, 1)
@@ -64,6 +66,7 @@ func startTask(minutes float64) {
 
 	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)
 	go PollInput(pauseCh, cancelCh, finishCh, &wg)
+	go recordScreen(cancelCh, finishCh, &wg)
 
 	wg.Wait()
 
@@ -79,5 +82,32 @@ func say(msg string) {
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println(err.Error())
+	}
+}
+
+func recordScreen(cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+	volume := "."
+
+	currentTime := time.Now()
+
+	timestamp := currentTime.Format("2006-01-02_15-04-05")
+
+	file := filepath.Join(volume, timestamp) + ".mp4"
+
+	cmd := exec.Command("screencapture", "-v", file)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	cmd.Start()
+
+	select {
+	case <-cancelCh:
+		wg.Done()
+		return
+	case <-finishCh:
+		cmd.Wait()
+		wg.Done()
+		return
 	}
 }

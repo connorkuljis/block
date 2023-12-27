@@ -40,20 +40,18 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 				if paused {
 					spinner.Disable()
 					close(pauseCh)
-					close(cancelCh)
-				} else {
-					close(cancelCh)
 				}
+				close(cancelCh)
 				wg.Done()
 				return
 			} else {
-				paused = !paused
 				if paused {
-					spinner.Start()
-				} else {
 					spinner.Stop()
+				} else {
+					spinner.Start()
 				}
-				pauseCh <- true
+				paused = !paused
+				pauseCh <- true // signals progress bar to wake or sleep
 			}
 		}
 	}
