@@ -33,12 +33,15 @@ func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, w
 	for {
 		select {
 		case <-cancelCh:
+			bar.Close()
 			wg.Done()
 			return
 		case <-pauseCh:
 			<-pauseCh
 		default:
 			if i == max {
+				bar.Close()
+				SendNotification("Task finished!")
 				close(finishCh)
 				wg.Done()
 				return

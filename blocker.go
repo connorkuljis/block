@@ -18,20 +18,26 @@ func NewBlocker() Blocker {
 	return Blocker{File: file}
 }
 
-func (b *Blocker) Start() {
+func (b *Blocker) Start() int {
 	n, err := b.Block()
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Printf(">> Blocker enabled. (%d bytes updated)\n", n)
+	if debug {
+		fmt.Printf("Removed comments from %s (%d) bytes written.\n", b.File, n)
+	}
+	return n
 }
 
-func (b *Blocker) Stop() {
+func (b *Blocker) Stop() int {
 	n, err := b.Unblock()
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Printf(">> Blocker disabled. (%d bytes updated)\n", n)
+	if debug {
+		fmt.Printf("Added comments from %s (%d) bytes written.\n", b.File, n)
+	}
+	return n
 }
 
 func (b *Blocker) Unblock() (int, error) {
@@ -41,17 +47,10 @@ func (b *Blocker) Unblock() (int, error) {
 		}
 		return "# " + line
 	}
-
-	n, err := b.UpdateBlockList(insertCommentCharacterFromLine)
+	n, err := b.UpdateBlockListAndRestartDNS(insertCommentCharacterFromLine)
 	if err != nil {
 		return n, err
 	}
-
-	err = resetDNS()
-	if err != nil {
-		return n, err
-	}
-
 	return n, nil
 }
 
@@ -62,21 +61,14 @@ func (b *Blocker) Block() (int, error) {
 		}
 		return line
 	}
-
-	n, err := b.UpdateBlockList(removeCommentCharacterFromLine)
+	n, err := b.UpdateBlockListAndRestartDNS(removeCommentCharacterFromLine)
 	if err != nil {
 		return n, err
 	}
-
-	err = resetDNS()
-	if err != nil {
-		return n, err
-	}
-
 	return n, nil
 }
 
-func (b *Blocker) UpdateBlockList(edit func(string) string) (int, error) {
+func (b *Blocker) UpdateBlockListAndRestartDNS(edit func(string) string) (int, error) {
 	totalBytes := 0
 
 	file, err := os.Open(b.File)
@@ -125,21 +117,34 @@ func (b *Blocker) UpdateBlockList(edit func(string) string) (int, error) {
 		return totalBytes, err
 	}
 
+	err = resetDNS()
+	if err != nil {
+		log.Println(err)
+	}
+
 	return totalBytes, nil
 }
 
 func resetDNS() error {
+	if debug {
+		fmt.Println("Flushing dscacheutil.")
+	}
 	cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
+	if debug {
+		fmt.Println("Terminating mDNSResponder. ")
+	}
 	cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
 	err = cmd.Run()
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("Successfully reset DNS.")
 
 	return nil
 }

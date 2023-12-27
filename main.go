@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 )
+
+const debug = false
 
 var (
 	minutes        float64
@@ -25,7 +25,6 @@ var rootCmd = &cobra.Command{
 		Automatically unblock sites when the task is complete.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("# Welcome to task-tracker-cli")
-		fmt.Println()
 
 		if disableBlocker {
 			startTask(minutes)
@@ -35,8 +34,6 @@ var rootCmd = &cobra.Command{
 			startTask(minutes)
 			blocker.Stop()
 		}
-
-		say("Goodbye")
 	},
 }
 
@@ -53,69 +50,38 @@ func main() {
 }
 
 func startTask(minutes float64) {
-	go say(fmt.Sprintf("Starting a timer for %.0f minutes.", minutes))
+	fmt.Printf("Starting a timer for %.1f minutes.\n", minutes)
 
 	startTime := time.Now()
 	fmt.Println("Start: " + startTime.Format("3:04:05pm"))
-
-	wg := sync.WaitGroup{}
-	wg.Add(3)
 
 	pauseCh := make(chan bool, 1)
 	cancelCh := make(chan bool, 1)
 	finishCh := make(chan bool, 1)
 
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
 	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)
 	go PollInput(pauseCh, cancelCh, finishCh, &wg)
-	go recordScreen(minutes, cancelCh, finishCh, &wg)
+	go FfmpegCaptureScreen(minutes, cancelCh, finishCh, &wg)
 
 	wg.Wait()
 
 	endTime := time.Now()
 	duration := time.Now().Sub(startTime)
 
-	fmt.Printf("End: " + endTime.Format("3:04:05pm"))
-	fmt.Printf(", %dh, %dm, %ds\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
+	fmt.Println("End: " + endTime.Format("3:04:05pm"))
+	fmt.Printf("Task time: %d hours, %d minutes and %d seconds.\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
 }
 
-func say(msg string) {
-	cmd := exec.Command("say", "-v", "Bubbles", msg)
-	err := cmd.Run()
+func SendNotification(message string) {
+	fmt.Println("Sending notification.")
+	cmd := exec.Command("terminal-notifier", "-title", "task-tracker-cli", "-sound", "default", "-message", message)
+	err := cmd.Start()
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-}
 
-func recordScreen(minutes float64, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings" // TODO: source this from config file.
-	filetype := ".mkv"
-
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-
-	filename := filepath.Join(recordingsDir, timestamp) + filetype
-
-	cmd := exec.Command("ffmpeg",
-		"-f", "avfoundation",
-		"-i", "1:0",
-		"-pix_fmt", "yuv420p",
-		"-r", "25",
-		filename,
-	)
-
-	fmt.Println("Starting screen capture")
-	err := cmd.Start()
-	if err != nil {
-		panic(err)
-	}
-
-	select {
-	case <-cancelCh:
-		cmd.Process.Signal(syscall.SIGTERM)
-	case <-finishCh:
-		cmd.Process.Signal(syscall.SIGTERM)
-	}
-
-	fmt.Println("\nScreen capture saved to: " + filename)
-	wg.Done()
-	return
+	cmd.Wait()
 }
