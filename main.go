@@ -87,7 +87,7 @@ func say(msg string) {
 }
 
 func recordScreen(minutes float64, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings"
+	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings" // TODO: source this from config file.
 	filetype := ".mkv"
 
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
