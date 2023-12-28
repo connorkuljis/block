@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -18,6 +19,10 @@ func progressBar(max int) *progressbar.ProgressBar {
 	)
 }
 
+func completeProgressBar() {
+	fmt.Println()
+}
+
 func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 	calculateTotalTicks := func(minutes float64, tickIntervalMs int) int {
 		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
@@ -33,7 +38,7 @@ func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, w
 	for {
 		select {
 		case <-cancelCh:
-			bar.Exit()
+			completeProgressBar()
 			wg.Done()
 			return
 		case <-pauseCh:
@@ -41,8 +46,7 @@ func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, w
 		default:
 			if i == max {
 				SendNotification("Complete")
-				bar.Exit()
-				bar.Clear()
+				completeProgressBar()
 				close(finishCh)
 				wg.Done()
 				return

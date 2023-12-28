@@ -6,12 +6,11 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
 )
 
-func FfmpegCaptureScreen(minutes float64, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	fmt.Println("Screen recording started")
-
+func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings" // TODO: source this from config file.
 
 	filename := ""
@@ -47,7 +46,8 @@ func FfmpegCaptureScreen(minutes float64, cancelCh, finishCh chan bool, wg *sync
 		cmd.Process.Signal(syscall.SIGTERM)
 	}
 
-	fmt.Println("Screen recording stopped. Saved to " + filepath)
+	fmt.Fprintln(w, "Saved recording to: "+filename)
+
 	wg.Done()
 	return
 }

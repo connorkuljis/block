@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -36,9 +35,8 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 			}
 
 			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc || event.Rune == 'q' {
-				fmt.Println("\nExiting!")
 				if paused {
-					spinner.Disable()
+					spinner.Stop()
 					close(pauseCh)
 				}
 				close(cancelCh)
@@ -51,7 +49,7 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 					spinner.Start()
 				}
 				paused = !paused
-				pauseCh <- true // signals progress bar to wake or sleep
+				pauseCh <- true
 			}
 		}
 	}
