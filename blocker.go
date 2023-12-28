@@ -23,7 +23,7 @@ func (b *Blocker) Start() int {
 	if err != nil {
 		log.Println(err)
 	}
-	if debug {
+	if verbose {
 		fmt.Printf("Removed comments from %s (%d) bytes written.\n", b.File, n)
 	}
 	return n
@@ -34,7 +34,7 @@ func (b *Blocker) Stop() int {
 	if err != nil {
 		log.Println(err)
 	}
-	if debug {
+	if verbose {
 		fmt.Printf("Added comments from %s (%d) bytes written.\n", b.File, n)
 	}
 	return n
@@ -126,7 +126,7 @@ func (b *Blocker) UpdateBlockListAndRestartDNS(edit func(string) string) (int, e
 }
 
 func resetDNS() error {
-	if debug {
+	if verbose {
 		fmt.Println("Flushing dscacheutil.")
 	}
 	cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
@@ -135,7 +135,7 @@ func resetDNS() error {
 		return err
 	}
 
-	if debug {
+	if verbose {
 		fmt.Println("Terminating mDNSResponder. ")
 	}
 	cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
@@ -143,8 +143,6 @@ func resetDNS() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("Successfully reset DNS.")
 
 	return nil
 }
