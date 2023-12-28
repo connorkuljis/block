@@ -17,7 +17,6 @@ func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishC
 	filetype := ".mkv"
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 
-	// prepend task name to file
 	if taskName == "" {
 		filename = timestamp + filetype
 	} else {

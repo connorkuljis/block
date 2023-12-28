@@ -7,10 +7,21 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"text/tabwriter"
 )
 
 type Blocker struct {
 	File string
+}
+
+func StartBlockerWrapper(blocker Blocker, w *tabwriter.Writer) {
+	blocker.Start()
+	fmt.Fprintf(w, "Blocker:\tstarted\n")
+}
+
+func StopBlockerWrapper(blocker Blocker, w *tabwriter.Writer) {
+	blocker.Stop()
+	fmt.Fprintf(w, "Blocker:\tstopped\n")
 }
 
 func NewBlocker() Blocker {
