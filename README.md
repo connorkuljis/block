@@ -31,6 +31,20 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 
 ---
 
+# Install
+
+## Download
+`git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
+
+## Build
+`make`
+
+## Run
+`make run`
+
+### Move binary to your path (optional)
+`make release`
+
 
 ## Optional
 
