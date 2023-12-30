@@ -1,5 +1,21 @@
 # Task Tracker CLI
 
+# Mission
+
+Spend less time on the computer and more time in the sun.
+
+---
+
+'One must be concious of the time he spends on the internet.
+It should be an event. Coming onto the net. Endless information and oppportunity.
+An event treated with respend and dowe with intention in mind. Very much like reading a book.
+Careful and focused on the goal. Read the pdf, write the text, send the message and fuck off of there.
+Back to the real world. Sitting at a cafe, chatting with people in your viciniy and reading a newspaper.
+Or perhaps sun bathing. Who knows. You get my idea. Lindy.'
+
+---
+
+
 ## Optional
 
 Editing the /etc/hosts file typically requires administrative privileges, and for security reasons, it's not recommended to completely eliminate the password prompt when using sudo to modify system files. However, you can configure sudo to not prompt for a password for specific commands, as discussed earlier.
