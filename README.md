@@ -1,19 +1,19 @@
-# Task Tracker CLI
+# block-cli
 
-**block** is a lever to reduce distractions from the command line. 
+**block** is a reduces distractions from the command line. 
 
 The program immediately blocks and unblocks websites when a task is started or completes.
 
 ```
-❯ ./block 0.1 --task "send message"
-Setting a timer for 0.1 minutes.
+❯ ./block 10 --task "draft email"
+Setting a timer for 10.0 minutes.
 ESC or 'q' to exit. Press any key to pause.
 Blocker:        started
  100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
 Blocker:        stopped
 Start time:     7:25:44am
 End time:       7:35:51am
-Duration:       0 hours, 0 minutes and 7 seconds.
+Duration:       0 hours, 10 minutes and 0 seconds.
 ```
 
 # Mission
