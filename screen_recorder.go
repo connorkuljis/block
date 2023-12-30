@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -35,7 +36,9 @@ func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishC
 
 	err := cmd.Start()
 	if err != nil {
-		panic(err)
+		log.Println("Error executing ffmpeg: " + err.Error())
+		wg.Done()
+		return
 	}
 
 	select {
@@ -45,7 +48,7 @@ func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishC
 		cmd.Process.Signal(syscall.SIGTERM)
 	}
 
-	fmt.Fprintln(w, "Saved recording to: "+filename)
+	fmt.Fprintln(w, "Saved recording to: "+filepath)
 
 	wg.Done()
 	return

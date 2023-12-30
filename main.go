@@ -42,7 +42,7 @@ Automatically unblock sites when the task is complete.`,
 
 		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
 
-		if enableBocker {
+		if !disableBocker {
 			StartBlockerWrapper(b, w)
 		}
 
@@ -50,7 +50,7 @@ Automatically unblock sites when the task is complete.`,
 
 		startInteractiveTimer(minutes, w)
 
-		if enableBocker {
+		if !disableBocker {
 			StopBlockerWrapper(b, w)
 		}
 
@@ -68,14 +68,14 @@ Automatically unblock sites when the task is complete.`,
 // flags
 var (
 	taskName             string
-	enableBocker         bool
+	disableBocker        bool
 	enableScreenRecorder bool
 	verbose              bool
 )
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&taskName, "task", "t", "", "Record optional task name.")
-	rootCmd.PersistentFlags().BoolVarP(&enableBocker, "blocker", "b", false, "Enables internet blocker.")
+	rootCmd.PersistentFlags().BoolVar(&disableBocker, "no-block", false, "Disables internet blocker.")
 	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enables screen recorder.")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
 }

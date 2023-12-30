@@ -7,5 +7,8 @@ run:
 clean:
 	rm ./block
 
+release:
+	sudo cp ./block /usr/local/bin
+
 dev:
 	reflex -g '*.go' -d fancy make
