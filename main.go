@@ -38,12 +38,12 @@ Automatically unblock sites when the task is complete.`,
 		fmt.Printf("Setting a timer for %.1f minutes.\n", minutes)
 
 		w := DefaultTabWriter()
-		blocker := NewBlocker()
+		b := NewBlocker()
 
 		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
 
 		if enableBocker {
-			StartBlockerWrapper(blocker, w)
+			StartBlockerWrapper(b, w)
 		}
 
 		startTime := time.Now()
@@ -51,7 +51,7 @@ Automatically unblock sites when the task is complete.`,
 		startInteractiveTimer(minutes, w)
 
 		if enableBocker {
-			StopBlockerWrapper(blocker, w)
+			StopBlockerWrapper(b, w)
 		}
 
 		endTime := time.Now()
