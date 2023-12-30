@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"sync"
 	"text/tabwriter"
@@ -80,11 +81,11 @@ func init() {
 }
 
 func main() {
-	// err := rootCmd.Execute()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	ReadConfig()
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// ReadConfig()
 }
 
 func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
