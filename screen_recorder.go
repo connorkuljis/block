@@ -12,7 +12,7 @@ import (
 )
 
 func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	recordingsDir := "/Users/connor/Code/golang/task-tracker-cli/recordings" // TODO: source this from config file.
+	recordingsDir := "~/Downloads" // TODO: Source from config file
 
 	filename := ""
 	filetype := ".mkv"
