@@ -47,6 +47,34 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 ### Move binary to your path (optional)
 `make release`
 
+## Block Sites (Guide)
+
+1. Open your `/etc/hosts` file
+
+`sudo vi /etc/hosts`
+
+2. Paste an example blocklist
+
+```
+# --- social media
+# 0.0.0.0 twitter.com
+# 0.0.0.0 www.youtube.com
+# 0.0.0.0 www.instagram.com
+# 0.0.0.0 www.reddit.com
+# 0.0.0.0 reddit.com
+# 0.0.0.0 www.old.reddit.com
+# 0.0.0.0 old.reddit.com
+# 0.0.0.0 www.facebook.com
+
+```
+
+- The program will uncomment the lines when you start the program, and add them back in when upon exit.
+ - If you have content you dont want the program to manipulate, add the following line to the hosts file.
+
+ `# ~ <-- lines below this `~` will not be uncommented/commented by block-cli`
+
+ in which the `~` acts as a delimiter.
+
 
 ## Optional
 
