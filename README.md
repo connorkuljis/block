@@ -1,5 +1,21 @@
 # Task Tracker CLI
 
+**block** is a lever to reduce distractions from the command line. 
+
+The program immediately blocks and unblocks websites when a task is started or completes.
+
+```
+❯ ./block 0.1 --task "send message"
+Setting a timer for 0.1 minutes.
+ESC or 'q' to exit. Press any key to pause.
+Blocker:        started
+ 100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
+Blocker:        stopped
+Start time:     7:25:44am
+End time:       7:35:51am
+Duration:       0 hours, 0 minutes and 7 seconds.
+```
+
 # Mission
 
 Spend less time on the computer and more time in the sun.
