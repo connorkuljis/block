@@ -71,9 +71,19 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 - The program will uncomment the lines when you start the program, and add them back in when upon exit.
  - If you have content you dont want the program to manipulate, add the following line to the hosts file.
 
- `# ~ <-- lines below this `~` will not be uncommented/commented by block-cli`
+ `# ~ <-- lines below this will not be uncommented/commented by block-cli`
 
  in which the `~` acts as a delimiter.
+
+# Screen Recording with Ffmpeg
+
+If you have `ffmpeg` on you machine you can automatically capture your screen. It will be saved to `~/Downloads`.
+
+To record your screen use the `-x` flag.
+
+# Improvements:
+1. `resetDNS` only flushes the DNS cache on macos.
+2. Implement `.config` file for user settings (eg: screen capture directory, default task length...)
 
 
 ## Optional
