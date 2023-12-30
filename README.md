@@ -1,6 +1,6 @@
 # block-cli
 
-**block** is a reduces distractions from the command line. 
+**block** reduces distractions from the command line. 
 
 The program immediately blocks and unblocks websites when a task is started or completes.
 
