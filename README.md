@@ -33,6 +33,8 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 
 # Install
 
+*note: requires `go`, you can install go here: [go.dev](https://go.dev/)*
+
 ## Download
 `git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
 
