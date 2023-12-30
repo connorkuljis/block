@@ -31,6 +31,23 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 
 ---
 
+# Usage
+```
+Block saves you time by blocking websites at IP level.
+Progress bar is displayed directly in the terminal. 
+Automatically unblock sites when the task is complete.
+
+Usage:
+  block [flags]
+
+Flags:
+  -h, --help              help for block
+      --no-block          Disables internet blocker.
+  -x, --screen-recorder   Enables screen recorder.
+  -t, --task string       Record optional task name.
+  -v, --verbose           Logs additional details.
+```
+
 # Install
 
 *note: requires `go`, you can install go here: [go.dev](https://go.dev/)*
