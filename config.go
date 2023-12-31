@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,32 +9,34 @@ import (
 )
 
 var cfg Config
+var appDir = ".config/block-cli"
+var configFile = "config.yaml"
 
 type Config struct {
-	Directory string `yaml:"directory"`
+	Recordings string `yaml:"directory"`
+	Database   string `yaml:"database"`
+}
+
+func FindFileInConfigDir(target string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return filepath.Join(home, appDir, target)
+
 }
 
 func ReadConfig() {
-	var config Config
-
-	homeDir, err := os.UserHomeDir()
-
-	configFilePath := ".config/block-cli/config.yaml"
-
-	filepath := filepath.Join(homeDir, configFilePath)
-
-	// Read the contents of the file
-	data, err := os.ReadFile(filepath)
+	c := FindFileInConfigDir(configFile)
+	bytes, err := os.ReadFile(c)
 	if err != nil {
 		log.Fatalf("Error reading file: %v", err)
 	}
 
-	err = yaml.Unmarshal([]byte(data), &config)
+	err = yaml.Unmarshal([]byte(bytes), &cfg)
 	if err != nil {
 		log.Fatalf("cannot unmarshal data: %v", err)
 	}
 
-	fmt.Println(config.Directory)
-
-	cfg = config
+	log.Println(cfg)
 }

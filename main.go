@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
@@ -11,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultDurationInMinutes = 5.0
-
 var rootCmd = &cobra.Command{
 	Use:   "block",
 	Short: "Block removes distractions when you work on tasks.",
@@ -21,7 +20,9 @@ Progress bar is displayed directly in the terminal.
 Automatically unblock sites when the task is complete.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		var minutes = defaultDurationInMinutes // TODO: source from config file.
+		// TODO: source from config file.
+		const defaultMinutes = 5.0
+		var minutes = defaultMinutes
 
 		if len(args) == 0 {
 			fmt.Printf("No arguments provided. Using default value %.1f.\n", minutes)
@@ -34,6 +35,10 @@ Automatically unblock sites when the task is complete.`,
 				minutes = f
 			}
 		}
+
+		currentTask := NewTask(taskName, minutes)
+		id := InsertTask(currentTask)
+		currentTask.ID = id
 
 		fmt.Printf("Setting a timer for %.1f minutes.\n", minutes)
 
@@ -56,6 +61,11 @@ Automatically unblock sites when the task is complete.`,
 
 		endTime := time.Now()
 		duration := endTime.Sub(startTime)
+
+		currentTask.FinishedAt = sql.NullTime{Time: endTime, Valid: true}
+		currentTask.ActualDuration = sql.NullFloat64{Float64: duration.Minutes(), Valid: true}
+
+		UpdateTask(currentTask)
 
 		fmt.Fprintf(w, "Start time:\t%s\n", startTime.Format("3:04:05pm"))
 		fmt.Fprintf(w, "End time:\t%s\n", endTime.Format("3:04:05pm"))
@@ -81,11 +91,13 @@ func init() {
 }
 
 func main() {
+	setupDB()
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// ReadConfig()
+	db.Close()
 }
 
 func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
@@ -101,7 +113,10 @@ func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
 		go FfmpegCaptureScreen(minutes, w, cancelCh, finishCh, &wg)
 	}
 
+	// tabwriter needs all the content in the buffer to calculate padding, thus we flush
+	// after the screen recorder check.
 	w.Flush()
+	// ensure the writer is flushed before starting other goroutines.
 
 	wg.Add(2)
 	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)

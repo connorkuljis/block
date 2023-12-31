@@ -45,7 +45,8 @@ func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, w
 			<-pauseCh
 		default:
 			if i == max {
-				SendNotification("Complete")
+				// TODO: fix notifications
+				// SendNotification("Complete")
 				completeProgressBar()
 				close(finishCh)
 				wg.Done()
