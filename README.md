@@ -4,6 +4,10 @@
 
 The program immediately blocks and unblocks websites when a task is started or completes.
 
+
+https://github.com/connorkuljis/block-cli/assets/36756393/fd5cb0ac-6756-4ce7-a21e-97e677e866f2
+
+
 ```
 ❯ ./block 10 --task "draft email"
 Setting a timer for 10.0 minutes.
