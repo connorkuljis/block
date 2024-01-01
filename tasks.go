@@ -99,14 +99,24 @@ func InsertTask(task Task) int64 {
 	return lastInsertID
 }
 
-func GetTaskByID(id int64) {
-	var retrievedRecord Task
-	err := db.Get(&retrievedRecord, "SELECT * FROM Tasks WHERE id = ?", id)
+func GetTaskByID(id int64) Task {
+	var task Task
+	err := db.Get(&task, "SELECT * FROM Tasks WHERE id = ?", id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Retrieved Record: %+v\n", retrievedRecord)
+	fmt.Printf("Retrieved Record: %+v\n", task)
+	return task
+}
+
+func GetAllTasks() []Task {
+	var tasks []Task
+	err := db.Select(&tasks, "SELECT * FROM Tasks")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return tasks
 }
 
 func UpdateTask(inTask Task) {

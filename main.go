@@ -17,6 +17,7 @@ var (
 	// flags
 	taskName             string
 	disableBocker        bool
+	showHistory          bool
 	enableScreenRecorder bool
 	verbose              bool
 
@@ -28,6 +29,7 @@ var (
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&taskName, "task", "t", "", "Record optional task name.")
 	rootCmd.PersistentFlags().BoolVar(&disableBocker, "no-block", false, "Disables internet blocker.")
+	rootCmd.PersistentFlags().BoolVar(&showHistory, "history", false, "Display history table.")
 	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enables screen recorder.")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
 }
@@ -38,6 +40,7 @@ func main() {
 	initConfig()
 	initDB()
 	// end global state
+	// displayTable()
 
 	err := rootCmd.Execute()
 	if err != nil {
@@ -54,6 +57,11 @@ Block saves you time by blocking websites at IP level.
 Progress bar is displayed directly in the terminal. 
 Automatically unblock sites when the task is complete.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if showHistory {
+			renderHistory()
+			return
+		}
+
 		minutes := config.DefaultDuration
 
 		if len(args) == 0 {
