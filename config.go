@@ -24,7 +24,7 @@ type AppInfo struct {
 	ConfigFileDir string
 }
 
-func initConfig() {
+func InitConfig() {
 	setAppInfo()
 
 	checkHealth()

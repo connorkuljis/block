@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS Tasks(
 );
 `
 
-func initDB() {
+func InitDB() {
 	db_file := filepath.Join(config.AppInfo.AppDir, "app_data.db")
 
 	if verbose {
@@ -139,6 +139,43 @@ func UpdateTask(inTask Task) {
 	if verbose {
 		fmt.Printf("Last Updated ID: %d\n", lastInsertID)
 	}
+}
+
+func UpdateTaskVodByID(id int64, filename string) {
+	updateQuery := `
+	UPDATE Tasks SET 
+	screen_url = $1 
+	WHERE id = $2`
+
+	result, err := db.Exec(updateQuery, filename, id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if verbose {
+		fmt.Printf("Updated vod: %d\n", lastInsertID)
+	}
+}
+
+func DeleteTaskByID(id string) {
+	q := `DELETE FROM Tasks WHERE id = $1`
+
+	result, err := db.Exec(q, id)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r, err := result.RowsAffected()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Deleted task %d, (%d rows affected.)\n", id, r)
 }
 
 func boolToInt(cond bool) int {

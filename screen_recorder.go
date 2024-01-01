@@ -5,20 +5,23 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"text/tabwriter"
 	"time"
 )
 
-func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+func FfmpegCaptureScreen(w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filetype := ".mkv"
 
 	filename := ""
+	taskName := globalArgs.TaskName
 	if taskName == "" {
 		filename = fmt.Sprintf("%s%s", timestamp, filetype)
 	} else {
+		taskName = strings.ReplaceAll(taskName, " ", "_")
 		filename = fmt.Sprintf("%s-%s%s", timestamp, taskName, filetype)
 	}
 
@@ -47,6 +50,8 @@ func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishC
 	}
 
 	fmt.Fprintln(w, "Saved recording to: "+filepath)
+
+	UpdateTaskVodByID(globalArgs.CurrentTaskID, filepath)
 
 	wg.Done()
 	return

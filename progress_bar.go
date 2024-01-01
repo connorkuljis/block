@@ -23,14 +23,14 @@ func completeProgressBar() {
 	fmt.Println()
 }
 
-func RenderProgressBar(minutes float64, pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+func RenderProgressBar(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 	calculateTotalTicks := func(minutes float64, tickIntervalMs int) int {
 		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
 	}
 
 	ticksPerSeconds := 15
 	interval := 1000 / ticksPerSeconds
-	max := calculateTotalTicks(minutes, interval)
+	max := calculateTotalTicks(globalArgs.Duration, interval)
 
 	bar := progressBar(max)
 

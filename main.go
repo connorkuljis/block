@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -15,38 +16,77 @@ import (
 
 var (
 	// flags
-	taskName             string
 	disableBocker        bool
-	showHistory          bool
+	deleteTaskID         int64
 	enableScreenRecorder bool
 	verbose              bool
 
 	// globals
-	db     *sqlx.DB
-	config UserConfig
+	db         *sqlx.DB
+	config     UserConfig
+	globalArgs Args
 )
 
+type Args struct {
+	Duration      float64
+	TaskName      string
+	CurrentTaskID int64
+}
+
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&taskName, "task", "t", "", "Record optional task name.")
-	rootCmd.PersistentFlags().BoolVar(&disableBocker, "no-block", false, "Disables internet blocker.")
-	rootCmd.PersistentFlags().BoolVar(&showHistory, "history", false, "Display history table.")
-	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enables screen recorder.")
+	rootCmd.PersistentFlags().BoolVarP(&disableBocker, "no-block", "d", false, "Do not block hosts file.")
+	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
 }
 
 func main() {
-
 	// global state
-	initConfig()
-	initDB()
-	// end global state
-	// displayTable()
+	InitConfig()
+	InitDB()
+
+	rootCmd.AddCommand(startCmd, historyCmd, deleteTaskCmd)
 
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
 	db.Close()
+}
+
+func stringToFloatOrString(arg string) interface{} {
+	f, err := strconv.ParseFloat(arg, 64)
+	if err != nil {
+		return arg
+	}
+	return f
+}
+
+func setGlobalArgs(args []string) error {
+	switch len(args) {
+	case 0:
+		d := config.DefaultDuration
+		globalArgs.Duration = d
+		fmt.Printf("No arguments provided. Using default value %.1f.\n", d)
+	case 1:
+		switch val := stringToFloatOrString(args[0]).(type) {
+		case float64:
+			globalArgs.Duration = val
+		case string:
+			globalArgs.TaskName = val
+		}
+	case 2:
+		switch val := stringToFloatOrString(args[0]).(type) {
+		case float64:
+			globalArgs.Duration = val
+			globalArgs.TaskName = args[1]
+		default:
+			return errors.New("Error, given 2 args, must be float followed by string.")
+		}
+	default:
+		return errors.New("Error, given 2 args, must be float followed by string.")
+	}
+
+	return nil
 }
 
 var rootCmd = &cobra.Command{
@@ -57,30 +97,23 @@ Block saves you time by blocking websites at IP level.
 Progress bar is displayed directly in the terminal. 
 Automatically unblock sites when the task is complete.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if showHistory {
-			renderHistory()
-			return
+		cmd.Usage()
+	},
+}
+
+var startCmd = &cobra.Command{
+	Use: "start",
+	Run: func(cmd *cobra.Command, args []string) {
+		err := setGlobalArgs(args)
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		minutes := config.DefaultDuration
-
-		if len(args) == 0 {
-			fmt.Printf("No arguments provided. Using default value %.1f.\n", minutes)
-		} else {
-			s := args[0]
-			f, err := strconv.ParseFloat(s, 64)
-			if err != nil {
-				fmt.Printf("Error parsing argument '%s' to float. Using default value %.1f.\n", s, minutes)
-			} else {
-				minutes = f
-			}
-		}
-
-		currentTask := NewTask(taskName, minutes)
+		currentTask := NewTask(globalArgs.TaskName, globalArgs.Duration)
 		id := InsertTask(currentTask)
-		currentTask.ID = id
+		globalArgs.CurrentTaskID = id
 
-		fmt.Printf("Setting a timer for %.1f minutes.\n", minutes)
+		fmt.Printf("Setting a timer for %.1f minutes.\n", globalArgs.Duration)
 
 		w := DefaultTabWriter()
 		b := NewBlocker()
@@ -93,29 +126,29 @@ Automatically unblock sites when the task is complete.`,
 
 		startTime := time.Now()
 
-		startInteractiveTimer(minutes, w)
+		startInteractiveTimer(w)
 
 		if !disableBocker {
 			StopBlockerWrapper(b, w)
 		}
 
 		endTime := time.Now()
-		duration := endTime.Sub(startTime)
+		totalTime := endTime.Sub(startTime)
 
 		currentTask.FinishedAt = sql.NullTime{Time: endTime, Valid: true}
-		currentTask.ActualDuration = sql.NullFloat64{Float64: duration.Minutes(), Valid: true}
+		currentTask.ActualDuration = sql.NullFloat64{Float64: totalTime.Minutes(), Valid: true}
 
 		UpdateTask(currentTask)
 
 		fmt.Fprintf(w, "Start time:\t%s\n", startTime.Format("3:04:05pm"))
 		fmt.Fprintf(w, "End time:\t%s\n", endTime.Format("3:04:05pm"))
-		fmt.Fprintf(w, "Duration:\t%d hours, %d minutes and %d seconds.\n", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
+		fmt.Fprintf(w, "Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
 
 		w.Flush()
 	},
 }
 
-func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
+func startInteractiveTimer(w *tabwriter.Writer) {
 	pauseCh := make(chan bool, 1)
 	cancelCh := make(chan bool, 1)
 	finishCh := make(chan bool, 1)
@@ -125,7 +158,7 @@ func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
 	if enableScreenRecorder {
 		fmt.Fprintf(w, "Screen Recorder:\tstarted\n")
 		wg.Add(1)
-		go FfmpegCaptureScreen(minutes, w, cancelCh, finishCh, &wg)
+		go FfmpegCaptureScreen(w, cancelCh, finishCh, &wg)
 	}
 
 	// tabwriter needs all the content in the buffer to calculate padding, thus we flush
@@ -134,7 +167,7 @@ func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
 	// ensure the writer is flushed before starting other goroutines.
 
 	wg.Add(2)
-	go RenderProgressBar(minutes, pauseCh, cancelCh, finishCh, &wg)
+	go RenderProgressBar(pauseCh, cancelCh, finishCh, &wg)
 	go PollInput(pauseCh, cancelCh, finishCh, &wg)
 
 	wg.Wait()
@@ -142,4 +175,20 @@ func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {
 	if enableScreenRecorder {
 		fmt.Fprintf(w, "Screen Recorder:\tstopped\n")
 	}
+}
+
+var historyCmd = &cobra.Command{
+	Use:   "history",
+	Short: "Show task history.",
+	Run: func(cmd *cobra.Command, args []string) {
+		RenderHistory()
+	},
+}
+
+var deleteTaskCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Deletes a task by given ID.",
+	Run: func(cmd *cobra.Command, args []string) {
+		DeleteTaskByID(args[0])
+	},
 }
