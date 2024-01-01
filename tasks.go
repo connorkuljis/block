@@ -175,7 +175,7 @@ func DeleteTaskByID(id string) {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Deleted task %d, (%d rows affected.)\n", id, r)
+	fmt.Printf("Deleted task %s, (%d rows affected.)\n", id, r)
 }
 
 func boolToInt(cond bool) int {

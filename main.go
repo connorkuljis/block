@@ -53,42 +53,6 @@ func main() {
 	db.Close()
 }
 
-func stringToFloatOrString(arg string) interface{} {
-	f, err := strconv.ParseFloat(arg, 64)
-	if err != nil {
-		return arg
-	}
-	return f
-}
-
-func setGlobalArgs(args []string) error {
-	switch len(args) {
-	case 0:
-		d := config.DefaultDuration
-		globalArgs.Duration = d
-		fmt.Printf("No arguments provided. Using default value %.1f.\n", d)
-	case 1:
-		switch val := stringToFloatOrString(args[0]).(type) {
-		case float64:
-			globalArgs.Duration = val
-		case string:
-			globalArgs.TaskName = val
-		}
-	case 2:
-		switch val := stringToFloatOrString(args[0]).(type) {
-		case float64:
-			globalArgs.Duration = val
-			globalArgs.TaskName = args[1]
-		default:
-			return errors.New("Error, given 2 args, must be float followed by string.")
-		}
-	default:
-		return errors.New("Error, given 2 args, must be float followed by string.")
-	}
-
-	return nil
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "block",
 	Short: "Block removes distractions when you work on tasks.",
@@ -106,7 +70,13 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		err := setGlobalArgs(args)
 		if err != nil {
+			cmd.Usage()
 			log.Fatal(err)
+		}
+
+		if globalArgs.Duration == 0.0 {
+			fmt.Println("No duration provided. Using default value")
+			globalArgs.Duration = config.DefaultDuration
 		}
 
 		currentTask := NewTask(globalArgs.TaskName, globalArgs.Duration)
@@ -148,6 +118,38 @@ var startCmd = &cobra.Command{
 	},
 }
 
+func stringToFloatOrString(arg string) interface{} {
+	f, err := strconv.ParseFloat(arg, 64)
+	if err != nil {
+		return arg
+	}
+	return f
+}
+
+func setGlobalArgs(args []string) error {
+	switch len(args) {
+	case 1:
+		switch val := stringToFloatOrString(args[0]).(type) {
+		case float64:
+			globalArgs.Duration = val
+		case string:
+			globalArgs.TaskName = val
+		}
+	case 2:
+		switch val := stringToFloatOrString(args[0]).(type) {
+		case float64:
+			globalArgs.Duration = val
+			globalArgs.TaskName = args[1]
+		default:
+			return errors.New("Error, given 2 args, must be float followed by string.")
+		}
+	default:
+		return errors.New(fmt.Sprintf("Error, too many args: given %d, expected 2", len(args)))
+	}
+
+	return nil
+}
+
 func startInteractiveTimer(w *tabwriter.Writer) {
 	pauseCh := make(chan bool, 1)
 	cancelCh := make(chan bool, 1)
@@ -161,10 +163,10 @@ func startInteractiveTimer(w *tabwriter.Writer) {
 		go FfmpegCaptureScreen(w, cancelCh, finishCh, &wg)
 	}
 
-	// tabwriter needs all the content in the buffer to calculate padding, thus we flush
+	// Tabwriter needs all the content in the buffer to calculate padding, thus we flush
 	// after the screen recorder check.
+	// Ensure the writer is flushed before starting other goroutines.
 	w.Flush()
-	// ensure the writer is flushed before starting other goroutines.
 
 	wg.Add(2)
 	go RenderProgressBar(pauseCh, cancelCh, finishCh, &wg)
