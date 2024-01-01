@@ -65,10 +65,12 @@ func NewTask(inName string, inDuration float64) Task {
 	newRecord := Task{
 		Name:              inName,
 		PlannedDuration:   inDuration,
+		ActualDuration:    sql.NullFloat64{Valid: false},
 		BlockerEnabled:    boolToInt(!disableBocker),
 		ScreenEnabled:     boolToInt(enableScreenRecorder),
 		ScreenURL:         sql.NullString{Valid: false},
 		CreatedAt:         time.Now(),
+		FinishedAt:        sql.NullTime{Valid: false},
 		Completed:         0,
 		CompletionPercent: sql.NullFloat64{Valid: false},
 	}
@@ -76,7 +78,7 @@ func NewTask(inName string, inDuration float64) Task {
 	return newRecord
 }
 
-func InsertTask(task Task) int64 {
+func InsertTask(task Task) Task {
 	insertQuery := `
 		INSERT INTO Tasks (name, planned_duration_minutes, blocker_enabled, screen_enabled, screen_url, created_at, completed, completion_percent)
 		VALUES (:name, :planned_duration_minutes, :blocker_enabled, :screen_enabled, :screen_url, :created_at, :completed, :completion_percent)
@@ -96,7 +98,8 @@ func InsertTask(task Task) int64 {
 		fmt.Printf("Last Inserted ID: %d\n", lastInsertID)
 	}
 
-	return lastInsertID
+	task.ID = lastInsertID
+	return task
 }
 
 func GetTaskByID(id int64) Task {
@@ -120,11 +123,10 @@ func GetAllTasks() []Task {
 }
 
 func UpdateTask(inTask Task) {
-	updateQuery := `
-	UPDATE Tasks SET 
-	finished_at = :finished_at, 
-	actual_duration_minutes = :actual_duration_minutes 
-	WHERE id = :id`
+	updateQuery := `UPDATE Tasks SET 
+finished_at=:finished_at,
+actual_duration_minutes=:actual_duration_minutes
+WHERE id = :id`
 
 	result, err := db.NamedExec(updateQuery, inTask)
 	if err != nil {

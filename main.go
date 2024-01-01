@@ -80,8 +80,8 @@ var startCmd = &cobra.Command{
 		}
 
 		currentTask := NewTask(globalArgs.TaskName, globalArgs.Duration)
-		id := InsertTask(currentTask)
-		globalArgs.CurrentTaskID = id
+		currentTask = InsertTask(currentTask)
+		globalArgs.CurrentTaskID = currentTask.ID
 
 		fmt.Printf("Setting a timer for %.1f minutes.\n", globalArgs.Duration)
 
@@ -139,6 +139,7 @@ func setGlobalArgs(args []string) error {
 		switch val := stringToFloatOrString(args[0]).(type) {
 		case float64:
 			globalArgs.Duration = val
+			fmt.Println(globalArgs.Duration)
 			globalArgs.TaskName = args[1]
 		default:
 			return errors.New("Error, given 2 args, must be float followed by string.")
