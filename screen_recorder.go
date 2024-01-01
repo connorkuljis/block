@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"text/tabwriter"
@@ -14,30 +12,17 @@ import (
 )
 
 func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
-	userHomeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Println("Error executing ffmpeg: " + err.Error())
-		wg.Done()
-		return
-	}
-
-	downloadsDir := "/Downloads"
-
-	userHomeDir = filepath.Join(userHomeDir, downloadsDir)
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	filetype := ".mkv"
 
 	filename := ""
-	filetype := ".mkv"
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-
 	if taskName == "" {
-		filename = timestamp + filetype
+		filename = fmt.Sprintf("%s%s", timestamp, filetype)
 	} else {
-		filename = timestamp + "_" + taskName + filetype
+		filename = fmt.Sprintf("%s-%s%s", timestamp, taskName, filetype)
 	}
 
-	filename = strings.ReplaceAll(filename, " ", "-")
-
-	filepath := filepath.Join(userHomeDir, filename)
+	filepath := filepath.Join(config.FfmpegRecordingsPath, filename)
 
 	cmd := exec.Command("ffmpeg",
 		"-f", "avfoundation",
@@ -47,7 +32,7 @@ func FfmpegCaptureScreen(minutes float64, w *tabwriter.Writer, cancelCh, finishC
 		filepath,
 	)
 
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		log.Println("Error executing ffmpeg: " + err.Error())
 		wg.Done()

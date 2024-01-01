@@ -9,20 +9,52 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cobra"
 )
+
+var (
+	// flags
+	taskName             string
+	disableBocker        bool
+	enableScreenRecorder bool
+	verbose              bool
+
+	// globals
+	db     *sqlx.DB
+	config UserConfig
+)
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&taskName, "task", "t", "", "Record optional task name.")
+	rootCmd.PersistentFlags().BoolVar(&disableBocker, "no-block", false, "Disables internet blocker.")
+	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enables screen recorder.")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
+}
+
+func main() {
+
+	// global state
+	initConfig()
+	initDB()
+	// end global state
+
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
+	db.Close()
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "block",
 	Short: "Block removes distractions when you work on tasks.",
-	Long: `Block saves you time by blocking websites at IP level.
+	Long: `
+Block saves you time by blocking websites at IP level.
 Progress bar is displayed directly in the terminal. 
 Automatically unblock sites when the task is complete.`,
-
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: source from config file.
-		const defaultMinutes = 5.0
-		var minutes = defaultMinutes
+		minutes := config.DefaultDuration
 
 		if len(args) == 0 {
 			fmt.Printf("No arguments provided. Using default value %.1f.\n", minutes)
@@ -73,31 +105,6 @@ Automatically unblock sites when the task is complete.`,
 
 		w.Flush()
 	},
-}
-
-// flags
-var (
-	taskName             string
-	disableBocker        bool
-	enableScreenRecorder bool
-	verbose              bool
-)
-
-func init() {
-	rootCmd.PersistentFlags().StringVarP(&taskName, "task", "t", "", "Record optional task name.")
-	rootCmd.PersistentFlags().BoolVar(&disableBocker, "no-block", false, "Disables internet blocker.")
-	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enables screen recorder.")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
-}
-
-func main() {
-	setupDB()
-	err := rootCmd.Execute()
-	if err != nil {
-		log.Fatal(err)
-	}
-	// ReadConfig()
-	db.Close()
 }
 
 func startInteractiveTimer(minutes float64, w *tabwriter.Writer) {

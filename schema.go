@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-var db *sqlx.DB
 
 // Task represents the structure of the database table
 type Task struct {
@@ -43,31 +42,23 @@ CREATE TABLE IF NOT EXISTS Tasks(
 );
 `
 
-func setupDB() {
-	db_file := FindFileInConfigDir("app_data.db")
+func initDB() {
+	db_file := filepath.Join(config.AppInfo.AppDir, "app_data.db")
+
 	if verbose {
-		log.Println(db_file)
+		log.Println("dbfile: " + db_file)
 	}
+
 	var err error
 	db, err = sqlx.Connect("sqlite3", db_file)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create the table if it doesn't exist
 	_, err = db.Exec(schema)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-}
-
-func boolToInt(cond bool) int {
-	var v int
-	if cond {
-		v = 1
-	}
-	return v
 }
 
 func NewTask(inName string, inDuration float64) Task {
@@ -96,7 +87,6 @@ func InsertTask(task Task) int64 {
 		log.Fatal(err)
 	}
 
-	// Get the last inserted ID
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
 		log.Fatal(err)
@@ -110,7 +100,6 @@ func InsertTask(task Task) int64 {
 }
 
 func GetTaskByID(id int64) {
-	// Query and display the inserted record
 	var retrievedRecord Task
 	err := db.Get(&retrievedRecord, "SELECT * FROM Tasks WHERE id = ?", id)
 	if err != nil {
@@ -140,4 +129,12 @@ func UpdateTask(inTask Task) {
 	if verbose {
 		fmt.Printf("Last Updated ID: %d\n", lastInsertID)
 	}
+}
+
+func boolToInt(cond bool) int {
+	var v int
+	if cond {
+		v = 1
+	}
+	return v
 }
