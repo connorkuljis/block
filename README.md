@@ -6,11 +6,13 @@ The program immediately blocks and unblocks websites when a task is started or c
 
 
 ```
-❯ ./block 10 --task "draft email"
+❯ block start 10 'draft emails' -x
 Setting a timer for 10.0 minutes.
 ESC or 'q' to exit. Press any key to pause.
-Blocker:        started
+Blocker:                started
+Screen Recorder:        started
  100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
+Screen Recorder:        stopped
 Blocker:        stopped
 Start time:     7:25:44am
 End time:       7:35:51am
@@ -34,19 +36,24 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 
 # Usage
 ```
-Block saves you time by blocking websites at IP level.
-Progress bar is displayed directly in the terminal. 
-Automatically unblock sites when the task is complete.
-
 Usage:
   block [flags]
+  block [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  delete      Deletes a task by given ID.
+  help        Help about any command
+  history     Show task history.
+  start
 
 Flags:
   -h, --help              help for block
-      --no-block          Disables internet blocker.
-  -x, --screen-recorder   Enables screen recorder.
-  -t, --task string       Record optional task name.
+  -d, --no-block          Do not block hosts file.
+  -x, --screen-recorder   Enable screen recorder.
   -v, --verbose           Logs additional details.
+
+Use "block [command] --help" for more information about a command.
 ```
 
 # Install
