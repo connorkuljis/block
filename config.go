@@ -49,8 +49,7 @@ func initConfig() {
 	}
 
 	if verbose {
-		log.Printf("Config: ")
-		log.Println(config)
+		log.Printf("Config: %v", config)
 	}
 }
 
