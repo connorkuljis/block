@@ -30,7 +30,7 @@ func RenderHistory() {
 		duration := fmt.Sprintf("%.2f", task.ActualDuration.Float64)
 		date := task.CreatedAt.Format("Mon Jan 02 15:04:05")
 		completed := fmt.Sprint(task.Completed)
-		completionPercent := fmt.Sprint(task.CompletionPercent.Float64)
+		completionPercent := fmt.Sprintf("%.2f%%", task.CompletionPercent.Float64)
 
 		row := []string{id, date, name, duration, completed, completionPercent}
 
