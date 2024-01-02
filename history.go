@@ -9,7 +9,7 @@ import (
 
 func RenderHistory() {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "Date", "Name", "Duration", "VOD"})
+	table.SetHeader([]string{"ID", "Date", "Name", "Duration", "Completed", "Completion Percent"})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -29,9 +29,10 @@ func RenderHistory() {
 		name := task.Name
 		duration := fmt.Sprintf("%.2f", task.ActualDuration.Float64)
 		date := task.CreatedAt.Format("Mon Jan 02 15:04:05")
-		vod := task.ScreenURL.String
+		completed := fmt.Sprint(task.Completed)
+		completionPercent := fmt.Sprint(task.CompletionPercent.Float64)
 
-		row := []string{id, date, name, duration, vod}
+		row := []string{id, date, name, duration, completed, completionPercent}
 
 		table.Append(row)
 	}

@@ -122,11 +122,12 @@ func GetAllTasks() []Task {
 }
 
 func UpdateTask(inTask *Task) {
-	updateQuery := `UPDATE Tasks SET 
-finished_at=:finished_at,
-actual_duration_minutes=:actual_duration_minutes,
-completed=:completed,
-completion_percent:=completion_percent
+	updateQuery := `
+UPDATE Tasks SET 
+finished_at = :finished_at,
+actual_duration_minutes = :actual_duration_minutes,
+completed = :completed,
+completion_percent = :completion_percent
 WHERE id = :id`
 
 	result, err := db.NamedExec(updateQuery, inTask)
