@@ -1,8 +1,8 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
@@ -23,33 +23,36 @@ func completeProgressBar() {
 	fmt.Println()
 }
 
-func RenderProgressBar(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+func RenderProgressBar(r Remote) {
 	calculateTotalTicks := func(minutes float64, tickIntervalMs int) int {
 		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
 	}
 
 	ticksPerSeconds := 15
 	interval := 1000 / ticksPerSeconds
-	max := calculateTotalTicks(globalArgs.Duration, interval)
+	max := calculateTotalTicks(currentTask.PlannedDuration, interval)
 
 	bar := progressBar(max)
 
 	i := 0
 	for {
 		select {
-		case <-cancelCh:
+		case <-r.Cancel:
 			completeProgressBar()
-			wg.Done()
+			currentTask.CompletionPercent = sql.NullFloat64{Float64: bar.State().CurrentPercent * 100, Valid: true}
+			r.wg.Done()
 			return
-		case <-pauseCh:
-			<-pauseCh
+		case <-r.Pause:
+			<-r.Pause
 		default:
 			if i == max {
 				// TODO: fix notifications
 				SendNotification("Complete")
 				completeProgressBar()
-				close(finishCh)
-				wg.Done()
+				currentTask.Completed = 1
+				currentTask.CompletionPercent = sql.NullFloat64{Float64: bar.State().CurrentPercent * 100, Valid: true}
+				close(r.Finish)
+				r.wg.Done()
 				return
 			}
 

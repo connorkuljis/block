@@ -7,7 +7,6 @@ import (
 	"log"
 	"strconv"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -15,42 +14,43 @@ import (
 )
 
 var (
-	// flags
-	disableBocker        bool
-	deleteTaskID         int64
-	enableScreenRecorder bool
-	verbose              bool
-
-	// globals
-	db         *sqlx.DB
-	config     UserConfig
-	globalArgs Args
+	db          *sqlx.DB
+	currentTask *Task
+	config      Config
+	flags       Flags
 )
 
-type Args struct {
-	Duration      float64
-	TaskName      string
-	CurrentTaskID int64
+type Flags struct {
+	DisableBlocker bool
+	ScreenRecorder bool
+	Verbose        bool
 }
 
-func init() {
-	rootCmd.PersistentFlags().BoolVarP(&disableBocker, "no-block", "d", false, "Do not block hosts file.")
-	rootCmd.PersistentFlags().BoolVarP(&enableScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Logs additional details.")
+type Args struct {
+	Name     string
+	Duration float64
 }
 
 func main() {
-	// global state
 	InitConfig()
 	InitDB()
 
-	rootCmd.AddCommand(startCmd, historyCmd, deleteTaskCmd)
+	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(historyCmd)
+	rootCmd.AddCommand(deleteTaskCmd)
 
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	db.Close()
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
+	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
+	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "verbose", "v", false, "Logs additional details.")
 }
 
 var rootCmd = &cobra.Command{
@@ -68,38 +68,30 @@ Automatically unblock sites when the task is complete.`,
 var startCmd = &cobra.Command{
 	Use: "start",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := setGlobalArgs(args)
+		myArgs, err := parseArgs(args)
 		if err != nil {
 			cmd.Usage()
 			log.Fatal(err)
 		}
 
-		if globalArgs.Duration == 0.0 {
-			fmt.Println("No duration provided. Using default value")
-			globalArgs.Duration = config.DefaultDuration
-		}
+		name := myArgs.Name
+		duration := myArgs.Duration
 
-		currentTask := NewTask(globalArgs.TaskName, globalArgs.Duration)
-		currentTask = InsertTask(currentTask)
-		globalArgs.CurrentTaskID = currentTask.ID
+		currentTask = InsertTask(NewTask(name, duration))
+		fmt.Printf("Setting a timer for %.1f minutes.\n", duration)
 
-		fmt.Printf("Setting a timer for %.1f minutes.\n", globalArgs.Duration)
-
-		w := DefaultTabWriter()
 		b := NewBlocker()
 
 		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
 
-		if !disableBocker {
-			StartBlockerWrapper(b, w)
-		}
-
 		startTime := time.Now()
 
-		startInteractiveTimer(w)
-
-		if !disableBocker {
-			StopBlockerWrapper(b, w)
+		if flags.DisableBlocker {
+			startInteractiveTimer()
+		} else {
+			StartBlockerWrapper(b)
+			startInteractiveTimer()
+			StopBlockerWrapper(b)
 		}
 
 		endTime := time.Now()
@@ -110,72 +102,83 @@ var startCmd = &cobra.Command{
 
 		UpdateTask(currentTask)
 
-		fmt.Fprintf(w, "Start time:\t%s\n", startTime.Format("3:04:05pm"))
-		fmt.Fprintf(w, "End time:\t%s\n", endTime.Format("3:04:05pm"))
-		fmt.Fprintf(w, "Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
-
-		w.Flush()
+		fmt.Printf("Start time:\t%s\n", startTime.Format("3:04:05pm"))
+		fmt.Printf("End time:\t%s\n", endTime.Format("3:04:05pm"))
+		fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
 	},
 }
 
-func stringToFloatOrString(arg string) interface{} {
-	f, err := strconv.ParseFloat(arg, 64)
-	if err != nil {
-		return arg
-	}
-	return f
-}
+// first arg is either float or string
+func parseArgs(args []string) (Args, error) {
+	var myArgs Args
 
-func setGlobalArgs(args []string) error {
+	stringToFloatOrString := func(arg string) interface{} {
+		f, err := strconv.ParseFloat(arg, 64)
+		if err != nil {
+			return arg
+		}
+		return f
+	}
+
 	if len(args) == 0 {
-		return errors.New("Error, at least one argument is required.")
+		return myArgs, errors.New("Error, at least one argument is required.")
 	}
 
-	arg1 := args[0]
-
-	// first arg is either float or string
-	switch result := stringToFloatOrString(arg1).(type) {
+	firstArg := args[0]
+	switch v := stringToFloatOrString(firstArg).(type) {
 	case float64:
-		globalArgs.Duration = result
+		myArgs.Duration = v
 	case string:
-		globalArgs.TaskName = result
+		myArgs.Name = v
 	}
 
-	// second arg is string
-	if len(args) == 2 {
-		arg2 := args[1]
-		globalArgs.TaskName = arg2
+	if len(args) > 1 {
+		nextArg := args[1]
+		myArgs.Name = nextArg
 	}
 
-	return nil
+	if myArgs.Duration == 0.0 {
+		fmt.Println("No duration provided. Using default value")
+		myArgs.Duration = config.DefaultDuration
+	}
+
+	return myArgs, nil
 }
 
-func startInteractiveTimer(w *tabwriter.Writer) {
-	pauseCh := make(chan bool, 1)
-	cancelCh := make(chan bool, 1)
-	finishCh := make(chan bool, 1)
+type Remote struct {
+	Pause  chan bool
+	Cancel chan bool
+	Finish chan bool
+	wg     *sync.WaitGroup
+}
 
-	wg := sync.WaitGroup{}
-
-	if enableScreenRecorder {
-		fmt.Fprintf(w, "Screen Recorder:\tstarted\n")
-		wg.Add(1)
-		go FfmpegCaptureScreen(w, cancelCh, finishCh, &wg)
+func startInteractiveTimer() {
+	r := Remote{
+		Pause:  make(chan bool, 1),
+		Cancel: make(chan bool, 1),
+		Finish: make(chan bool, 1),
+		wg:     &sync.WaitGroup{},
 	}
 
-	// Tabwriter needs all the content in the buffer to calculate padding, thus we flush
-	// after the screen recorder check.
-	// Ensure the writer is flushed before starting other goroutines.
-	w.Flush()
+	if flags.ScreenRecorder {
+		r.wg.Add(3)
 
-	wg.Add(2)
-	go RenderProgressBar(pauseCh, cancelCh, finishCh, &wg)
-	go PollInput(pauseCh, cancelCh, finishCh, &wg)
+		fmt.Printf("Screen Recorder:\tstarted\n")
 
-	wg.Wait()
+		go FfmpegCaptureScreen(r)
+		go RenderProgressBar(r)
+		go PollInput(r)
 
-	if enableScreenRecorder {
-		fmt.Fprintf(w, "Screen Recorder:\tstopped\n")
+		r.wg.Wait()
+
+		fmt.Printf("Screen Recorder:\tstopped\n")
+	} else {
+		r.wg.Add(2)
+
+		go RenderProgressBar(r)
+		go PollInput(r)
+
+		r.wg.Wait()
 	}
 }
 
@@ -191,6 +194,7 @@ var deleteTaskCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes a task by given ID.",
 	Run: func(cmd *cobra.Command, args []string) {
-		DeleteTaskByID(args[0])
+		id := args[0]
+		DeleteTaskByID(id)
 	},
 }

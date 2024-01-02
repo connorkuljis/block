@@ -6,18 +6,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
-	"text/tabwriter"
 	"time"
 )
 
-func FfmpegCaptureScreen(w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+func FfmpegCaptureScreen(r Remote) {
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	taskName := currentTask.Name
 	filetype := ".mkv"
-
 	filename := ""
-	taskName := globalArgs.TaskName
+
 	if taskName == "" {
 		filename = fmt.Sprintf("%s%s", timestamp, filetype)
 	} else {
@@ -27,9 +25,11 @@ func FfmpegCaptureScreen(w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *
 
 	filepath := filepath.Join(config.FfmpegRecordingsPath, filename)
 
+	inputs := config.AvfoundationDevice
+
 	cmd := exec.Command("ffmpeg",
 		"-f", "avfoundation",
-		"-i", "1:1",
+		"-i", inputs,
 		"-pix_fmt", "yuv420p",
 		"-r", "25",
 		filepath,
@@ -38,21 +38,21 @@ func FfmpegCaptureScreen(w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *
 	err := cmd.Start()
 	if err != nil {
 		log.Println("Error executing ffmpeg: " + err.Error())
-		wg.Done()
+		r.wg.Done()
 		return
 	}
 
 	select {
-	case <-cancelCh:
+	case <-r.Cancel:
 		cmd.Process.Signal(syscall.SIGTERM)
-	case <-finishCh:
+	case <-r.Finish:
 		cmd.Process.Signal(syscall.SIGTERM)
 	}
 
-	fmt.Fprintln(w, "Saved recording to: "+filepath)
+	fmt.Println("Saved recording to: " + filepath)
 
-	UpdateTaskVodByID(globalArgs.CurrentTaskID, filepath)
+	UpdateTaskVodByID(currentTask.ID, filepath)
 
-	wg.Done()
+	r.wg.Done()
 	return
 }

@@ -1,14 +1,13 @@
 package main
 
 import (
-	"sync"
 	"time"
 
 	"github.com/briandowns/spinner"
 	"github.com/eiannone/keyboard"
 )
 
-func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
+func PollInput(r Remote) {
 	err := keyboard.Open()
 	if err != nil {
 		panic(err)
@@ -26,8 +25,8 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 	spinner.Suffix = " Press any key to resume."
 	for {
 		select {
-		case <-finishCh:
-			wg.Done()
+		case <-r.Finish:
+			r.wg.Done()
 			return
 		case event := <-keysEvents:
 			if event.Err != nil {
@@ -37,10 +36,10 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc || event.Rune == 'q' {
 				if paused {
 					spinner.Stop()
-					close(pauseCh)
+					close(r.Pause)
 				}
-				close(cancelCh)
-				wg.Done()
+				close(r.Cancel)
+				r.wg.Done()
 				return
 			} else {
 				if paused {
@@ -49,7 +48,7 @@ func PollInput(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup) {
 					spinner.Start()
 				}
 				paused = !paused
-				pauseCh <- true
+				r.Pause <- true
 			}
 		}
 	}

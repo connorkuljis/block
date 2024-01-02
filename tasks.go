@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS Tasks(
 func InitDB() {
 	db_file := filepath.Join(config.AppInfo.AppDir, "app_data.db")
 
-	if verbose {
+	if flags.Verbose {
 		log.Println("dbfile: " + db_file)
 	}
 
@@ -61,24 +61,22 @@ func InitDB() {
 	}
 }
 
-func NewTask(inName string, inDuration float64) Task {
-	newRecord := Task{
+func NewTask(inName string, inDuration float64) *Task {
+	return &Task{
 		Name:              inName,
 		PlannedDuration:   inDuration,
 		ActualDuration:    sql.NullFloat64{Valid: false},
-		BlockerEnabled:    boolToInt(!disableBocker),
-		ScreenEnabled:     boolToInt(enableScreenRecorder),
+		BlockerEnabled:    boolToInt(!flags.DisableBlocker),
+		ScreenEnabled:     boolToInt(flags.ScreenRecorder),
 		ScreenURL:         sql.NullString{Valid: false},
 		CreatedAt:         time.Now(),
 		FinishedAt:        sql.NullTime{Valid: false},
 		Completed:         0,
 		CompletionPercent: sql.NullFloat64{Valid: false},
 	}
-
-	return newRecord
 }
 
-func InsertTask(task Task) Task {
+func InsertTask(task *Task) *Task {
 	insertQuery := `
 		INSERT INTO Tasks (name, planned_duration_minutes, blocker_enabled, screen_enabled, screen_url, created_at, completed, completion_percent)
 		VALUES (:name, :planned_duration_minutes, :blocker_enabled, :screen_enabled, :screen_url, :created_at, :completed, :completion_percent)
@@ -94,11 +92,12 @@ func InsertTask(task Task) Task {
 		log.Fatal(err)
 	}
 
-	if verbose {
+	if flags.Verbose {
 		fmt.Printf("Last Inserted ID: %d\n", lastInsertID)
 	}
 
 	task.ID = lastInsertID
+
 	return task
 }
 
@@ -122,10 +121,12 @@ func GetAllTasks() []Task {
 	return tasks
 }
 
-func UpdateTask(inTask Task) {
+func UpdateTask(inTask *Task) {
 	updateQuery := `UPDATE Tasks SET 
 finished_at=:finished_at,
-actual_duration_minutes=:actual_duration_minutes
+actual_duration_minutes=:actual_duration_minutes,
+completed=:completed,
+completion_percent:=completion_percent
 WHERE id = :id`
 
 	result, err := db.NamedExec(updateQuery, inTask)
@@ -138,7 +139,7 @@ WHERE id = :id`
 		log.Fatal(err)
 	}
 
-	if verbose {
+	if flags.Verbose {
 		fmt.Printf("Last Updated ID: %d\n", lastInsertID)
 	}
 }
@@ -159,7 +160,7 @@ func UpdateTaskVodByID(id int64, filename string) {
 		log.Fatal(err)
 	}
 
-	if verbose {
+	if flags.Verbose {
 		fmt.Printf("Updated vod: %d\n", lastInsertID)
 	}
 }

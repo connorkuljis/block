@@ -12,7 +12,7 @@ import (
 const APP_DIR = ".config/block-cli"
 const CONFIG_FILE = "config.yaml"
 
-type UserConfig struct {
+type Config struct {
 	FfmpegRecordingsPath string  `yaml:"ffmpegRecordingsPath"`
 	AvfoundationDevice   string  `yaml:"avfoundationDevice"`
 	DefaultDuration      float64 `yaml:"defaultDuration"`
@@ -57,7 +57,7 @@ func InitConfig() {
 		log.Fatalf("Error, %s does not exist: %v", config.FfmpegRecordingsPath, err)
 	}
 
-	if verbose {
+	if flags.Verbose {
 		log.Printf("Config: %v", config)
 	}
 }

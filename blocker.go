@@ -7,21 +7,20 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"text/tabwriter"
 )
 
 type Blocker struct {
 	File string
 }
 
-func StartBlockerWrapper(blocker Blocker, w *tabwriter.Writer) {
+func StartBlockerWrapper(blocker Blocker) {
 	blocker.Start()
-	fmt.Fprintf(w, "Blocker:\tstarted\n")
+	fmt.Printf("Blocker:\tstarted\n")
 }
 
-func StopBlockerWrapper(blocker Blocker, w *tabwriter.Writer) {
+func StopBlockerWrapper(blocker Blocker) {
 	blocker.Stop()
-	fmt.Fprintf(w, "Blocker:\tstopped\n")
+	fmt.Printf("Blocker:\tstopped\n")
 }
 
 func NewBlocker() Blocker {
@@ -34,7 +33,7 @@ func (b *Blocker) Start() int {
 	if err != nil {
 		log.Println(err)
 	}
-	if verbose {
+	if flags.Verbose {
 		fmt.Printf("Removed comments from %s (%d) bytes written.\n", b.File, n)
 	}
 	return n
@@ -45,7 +44,7 @@ func (b *Blocker) Stop() int {
 	if err != nil {
 		log.Println(err)
 	}
-	if verbose {
+	if flags.Verbose {
 		fmt.Printf("Added comments from %s (%d) bytes written.\n", b.File, n)
 	}
 	return n
@@ -137,7 +136,7 @@ func (b *Blocker) UpdateBlockListAndRestartDNS(edit func(string) string) (int, e
 }
 
 func resetDNS() error {
-	if verbose {
+	if flags.Verbose {
 		fmt.Println("Flushing dscacheutil.")
 	}
 	cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
@@ -146,7 +145,7 @@ func resetDNS() error {
 		return err
 	}
 
-	if verbose {
+	if flags.Verbose {
 		fmt.Println("Terminating mDNSResponder. ")
 	}
 	cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
