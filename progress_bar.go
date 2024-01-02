@@ -46,7 +46,7 @@ func RenderProgressBar(pauseCh, cancelCh, finishCh chan bool, wg *sync.WaitGroup
 		default:
 			if i == max {
 				// TODO: fix notifications
-				// SendNotification("Complete")
+				SendNotification("Complete")
 				completeProgressBar()
 				close(finishCh)
 				wg.Done()

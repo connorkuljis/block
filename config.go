@@ -14,6 +14,7 @@ const CONFIG_FILE = "config.yaml"
 
 type UserConfig struct {
 	FfmpegRecordingsPath string  `yaml:"ffmpegRecordingsPath"`
+	AvfoundationDevice   string  `yaml:"avfoundationDevice"`
 	DefaultDuration      float64 `yaml:"defaultDuration"`
 	AppInfo              AppInfo
 }
@@ -41,6 +42,14 @@ func InitConfig() {
 
 	if config.DefaultDuration <= 0.0 {
 		log.Fatalf("Error, default duration must be greater than 0.0, given: %f", config.DefaultDuration)
+	}
+
+	if config.AvfoundationDevice == "" {
+		// AVFoundation is the currently recommended framework by Apple for
+		// stream grabbing on OSX >= 10.7 as well as on iOS.
+		// The input filename has to be given in the following syntax:
+		// -i "[[VIDEO]:[AUDIO]]"
+		config.AvfoundationDevice = "1:0"
 	}
 
 	_, err = os.Stat(config.FfmpegRecordingsPath)

@@ -29,7 +29,7 @@ func FfmpegCaptureScreen(w *tabwriter.Writer, cancelCh, finishCh chan bool, wg *
 
 	cmd := exec.Command("ffmpeg",
 		"-f", "avfoundation",
-		"-i", "1:0",
+		"-i", "1:1",
 		"-pix_fmt", "yuv420p",
 		"-r", "25",
 		filepath,

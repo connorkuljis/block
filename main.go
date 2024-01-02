@@ -127,25 +127,24 @@ func stringToFloatOrString(arg string) interface{} {
 }
 
 func setGlobalArgs(args []string) error {
-	switch len(args) {
-	case 1:
-		switch val := stringToFloatOrString(args[0]).(type) {
-		case float64:
-			globalArgs.Duration = val
-		case string:
-			globalArgs.TaskName = val
-		}
-	case 2:
-		switch val := stringToFloatOrString(args[0]).(type) {
-		case float64:
-			globalArgs.Duration = val
-			fmt.Println(globalArgs.Duration)
-			globalArgs.TaskName = args[1]
-		default:
-			return errors.New("Error, given 2 args, must be float followed by string.")
-		}
-	default:
-		return errors.New(fmt.Sprintf("Error, too many args: given %d, expected 2", len(args)))
+	if len(args) == 0 {
+		return errors.New("Error, at least one argument is required.")
+	}
+
+	arg1 := args[0]
+
+	// first arg is either float or string
+	switch result := stringToFloatOrString(arg1).(type) {
+	case float64:
+		globalArgs.Duration = result
+	case string:
+		globalArgs.TaskName = result
+	}
+
+	// second arg is string
+	if len(args) == 2 {
+		arg2 := args[1]
+		globalArgs.TaskName = arg2
 	}
 
 	return nil
