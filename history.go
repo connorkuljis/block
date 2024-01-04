@@ -9,7 +9,7 @@ import (
 
 func RenderHistory() {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"ID", "Date", "Name", "Duration", "Completed", "Completion Percent"})
+	table.SetHeader([]string{"ID", "Date", "Name", "Planned (min)", "Actual (min)", "Completion Percent", "Completed"})
 	table.SetAutoWrapText(false)
 	table.SetAutoFormatHeaders(true)
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
@@ -27,12 +27,18 @@ func RenderHistory() {
 	for _, task := range tasks {
 		id := fmt.Sprint(task.ID)
 		name := task.Name
-		duration := fmt.Sprintf("%.2f", task.ActualDuration.Float64)
+		planned := fmt.Sprintf("%.0f", task.PlannedDuration)
+		actual := fmt.Sprintf("%.0f", task.ActualDuration.Float64)
 		date := task.CreatedAt.Format("Mon Jan 02 15:04:05")
-		completed := fmt.Sprint(task.Completed)
+
 		completionPercent := fmt.Sprintf("%.2f%%", task.CompletionPercent.Float64)
 
-		row := []string{id, date, name, duration, completed, completionPercent}
+		var completed string
+		if task.Completed == 1 {
+			completed = "✅"
+		}
+
+		row := []string{id, date, name, planned, actual, completionPercent, completed}
 
 		table.Append(row)
 	}
