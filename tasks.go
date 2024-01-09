@@ -4,12 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+const DBName = "app_data.db"
 
 // Task represents the structure of the database table
 type Task struct {
@@ -43,14 +46,14 @@ CREATE TABLE IF NOT EXISTS Tasks(
 `
 
 func InitDB() {
-	db_file := filepath.Join(config.AppInfo.AppDir, "app_data.db")
-
-	if flags.Verbose {
-		log.Println("dbfile: " + db_file)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	var err error
-	db, err = sqlx.Connect("sqlite3", db_file)
+	dbFile := filepath.Join(homeDir, ConfigDir, DBName)
+
+	db, err = sqlx.Connect("sqlite3", dbFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,10 +80,24 @@ func NewTask(inName string, inDuration float64) *Task {
 }
 
 func InsertTask(task *Task) *Task {
-	insertQuery := `
-		INSERT INTO Tasks (name, planned_duration_minutes, blocker_enabled, screen_enabled, screen_url, created_at, completed, completion_percent)
-		VALUES (:name, :planned_duration_minutes, :blocker_enabled, :screen_enabled, :screen_url, :created_at, :completed, :completion_percent)
-	`
+	insertQuery := `INSERT INTO Tasks (
+	name, 
+	planned_duration_minutes, 
+	blocker_enabled, 
+	screen_enabled, 
+	screen_url, 
+	created_at, 
+	completed, 
+	completion_percent) 
+	VALUES (
+	:name, 
+	:planned_duration_minutes, 
+	:blocker_enabled, 
+	:screen_enabled, 
+	:screen_url, 
+	:created_at, 
+	:completed, 
+	:completion_percent)`
 
 	result, err := db.NamedExec(insertQuery, task)
 	if err != nil {
@@ -122,13 +139,12 @@ func GetAllTasks() []Task {
 }
 
 func UpdateTask(inTask *Task) {
-	updateQuery := `
-UPDATE Tasks SET 
-finished_at = :finished_at,
-actual_duration_minutes = :actual_duration_minutes,
-completed = :completed,
-completion_percent = :completion_percent
-WHERE id = :id`
+	updateQuery := `UPDATE Tasks SET 
+	finished_at = :finished_at,
+	actual_duration_minutes = :actual_duration_minutes,
+	completed = :completed,
+	completion_percent = :completion_percent
+	WHERE id = :id`
 
 	result, err := db.NamedExec(updateQuery, inTask)
 	if err != nil {
@@ -146,8 +162,7 @@ WHERE id = :id`
 }
 
 func UpdateTaskVodByID(id int64, filename string) {
-	updateQuery := `
-	UPDATE Tasks SET 
+	updateQuery := `UPDATE Tasks SET 
 	screen_url = $1 
 	WHERE id = $2`
 

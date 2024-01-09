@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -16,7 +15,7 @@ import (
 var (
 	db          *sqlx.DB
 	currentTask *Task
-	config      Config
+	cfg         Config
 	flags       Flags
 )
 
@@ -26,20 +25,21 @@ type Flags struct {
 	Verbose        bool
 }
 
-type Args struct {
-	Name     string
-	Duration float64
-}
-
 func main() {
-	InitConfig()
+	var err error
+	cfg, err = InitConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	InitDB()
 
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(historyCmd)
 	rootCmd.AddCommand(deleteTaskCmd)
+	rootCmd.AddCommand(resetDNSCommand)
 
-	err := rootCmd.Execute()
+	err = rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,9 +78,7 @@ var startCmd = &cobra.Command{
 		duration := myArgs.Duration
 
 		currentTask = InsertTask(NewTask(name, duration))
-		fmt.Printf("Setting a timer for %.1f minutes.\n", duration)
-
-		b := NewBlocker()
+		// fmt.Printf("Setting a timer for %.1f minutes.\n", duration)
 
 		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
 
@@ -89,9 +87,24 @@ var startCmd = &cobra.Command{
 		if flags.DisableBlocker {
 			startInteractiveTimer()
 		} else {
-			b.Start()
+			b := NewBlocker()
+
+			err := b.Block()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = ResetDNS()
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			startInteractiveTimer()
-			b.Stop()
+
+			err = b.Unblock()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		endTime := time.Now()
@@ -102,44 +115,46 @@ var startCmd = &cobra.Command{
 
 		UpdateTask(currentTask)
 
-		fmt.Printf("Start time:\t%s\n", startTime.Format("3:04:05pm"))
-		fmt.Printf("End time:\t%s\n", endTime.Format("3:04:05pm"))
-		fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
+		if flags.Verbose {
+			fmt.Printf("Start time:\t%s\n", startTime.Format("3:04:05pm"))
+			fmt.Printf("End time:\t%s\n", endTime.Format("3:04:05pm"))
+			fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
+		}
 	},
+}
+
+type Args struct {
+	Name     string
+	Duration float64
+}
+
+func stringToFloat(argStr string) interface{} {
+	floatval, err := strconv.ParseFloat(argStr, 64)
+	if err != nil {
+		return err
+	}
+	return floatval
 }
 
 // first arg is either float or string
 func parseArgs(args []string) (Args, error) {
-	var myArgs Args
+	myArgs := Args{}
 
-	stringToFloatOrString := func(arg string) interface{} {
-		f, err := strconv.ParseFloat(arg, 64)
-		if err != nil {
-			return arg
-		}
-		return f
+	if len(args) != 2 {
+		return myArgs, fmt.Errorf("Invalid number of arguments, expected 2, recieved: %d", len(args))
 	}
 
-	if len(args) == 0 {
-		return myArgs, errors.New("Error, at least one argument is required.")
+	inDuration := args[0]
+	inName := args[1]
+
+	duration, err := strconv.ParseFloat(inDuration, 64)
+	if err != nil {
+		return myArgs, fmt.Errorf("Error converting %s to float. Please provide a valid float.", inDuration)
 	}
 
-	firstArg := args[0]
-	switch v := stringToFloatOrString(firstArg).(type) {
-	case float64:
-		myArgs.Duration = v
-	case string:
-		myArgs.Name = v
-	}
-
-	if len(args) > 1 {
-		nextArg := args[1]
-		myArgs.Name = nextArg
-	}
-
-	if myArgs.Duration == 0.0 {
-		fmt.Println("No duration provided. Using default value")
-		myArgs.Duration = config.DefaultDuration
+	myArgs = Args{
+		Duration: duration,
+		Name:     inName,
 	}
 
 	return myArgs, nil
@@ -196,5 +211,17 @@ var deleteTaskCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		id := args[0]
 		DeleteTaskByID(id)
+	},
+}
+
+var resetDNSCommand = &cobra.Command{
+	Use:   "reset",
+	Short: "Reset DNS cache.",
+	Run: func(cmd *cobra.Command, args []string) {
+		flags.Verbose = true
+		err := ResetDNS()
+		if err != nil {
+			log.Println(err)
+		}
 	},
 }

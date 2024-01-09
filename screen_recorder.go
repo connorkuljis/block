@@ -23,9 +23,11 @@ func FfmpegCaptureScreen(r Remote) {
 		filename = fmt.Sprintf("%s-%s%s", timestamp, taskName, filetype)
 	}
 
-	filepath := filepath.Join(config.FfmpegRecordingsPath, filename)
+	filepath := filepath.Join(cfg.FfmpegRecordingsPath, filename)
 
-	inputs := config.AvfoundationDevice
+	fmt.Println("Saving recording to: " + filepath)
+
+	inputs := cfg.AvfoundationDevice
 
 	cmd := exec.Command("ffmpeg",
 		"-f", "avfoundation",
@@ -48,8 +50,6 @@ func FfmpegCaptureScreen(r Remote) {
 	case <-r.Finish:
 		cmd.Process.Signal(syscall.SIGTERM)
 	}
-
-	fmt.Println("Saved recording to: " + filepath)
 
 	UpdateTaskVodByID(currentTask.ID, filepath)
 

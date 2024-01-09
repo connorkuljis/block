@@ -9,114 +9,105 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const APP_DIR = ".config/block-cli"
-const CONFIG_FILE = "config.yaml"
-
 type Config struct {
-	FfmpegRecordingsPath string  `yaml:"ffmpegRecordingsPath"`
-	AvfoundationDevice   string  `yaml:"avfoundationDevice"`
-	DefaultDuration      float64 `yaml:"defaultDuration"`
-	AppInfo              AppInfo
+	FfmpegRecordingsPath string `yaml:"ffmpegRecordingsPath"`
+	AvfoundationDevice   string `yaml:"avfoundationDevice"`
 }
 
-type AppInfo struct {
-	HomeDir       string
-	AppDir        string
-	ConfigFileDir string
-}
+const (
+	ConfigDir = ".config/block-cli"
+	YamlFile  = "config.yaml"
+)
 
-func InitConfig() {
-	setAppInfo()
-
-	checkHealth()
-
-	bytes, err := os.ReadFile(config.AppInfo.ConfigFileDir)
-	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
-	}
-
-	err = yaml.Unmarshal([]byte(bytes), &config)
-	if err != nil {
-		log.Fatalf("Error, initialising config file: %v", err)
-	}
-
-	if config.DefaultDuration <= 0.0 {
-		log.Fatalf("Error, default duration must be greater than 0.0, given: %f", config.DefaultDuration)
-	}
-
-	if config.AvfoundationDevice == "" {
-		// AVFoundation is the currently recommended framework by Apple for
-		// stream grabbing on OSX >= 10.7 as well as on iOS.
-		// The input filename has to be given in the following syntax:
-		// -i "[[VIDEO]:[AUDIO]]"
-		config.AvfoundationDevice = "1:0"
-	}
-
-	_, err = os.Stat(config.FfmpegRecordingsPath)
-	if err != nil {
-		log.Fatalf("Error, %s does not exist: %v", config.FfmpegRecordingsPath, err)
-	}
-
-	if flags.Verbose {
-		log.Printf("Config: %v", config)
-	}
-}
-
-func setAppInfo() {
-	var appInfo AppInfo
+func InitConfig() (Config, error) {
+	var config Config
+	config.FfmpegRecordingsPath = "."
+	config.AvfoundationDevice = "1:0"
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("Error creating config dir: %v", err)
+		return config, err
 	}
 
-	appInfo.HomeDir = homeDir
-	appInfo.AppDir = filepath.Join(homeDir, APP_DIR)
-	appInfo.ConfigFileDir = filepath.Join(homeDir, APP_DIR, CONFIG_FILE)
+	configPath := filepath.Join(homeDir, ConfigDir)
+	configYaml := filepath.Join(configPath, YamlFile)
 
-	config.AppInfo = appInfo
+	// check config path exists, if not create it
+	_, err = os.Stat(configPath)
+	if err != nil {
+		err := os.MkdirAll(configPath, os.ModePerm)
+		if err != nil {
+			return config, err
+		}
+	}
+
+	_, err = os.Stat(configYaml)
+	if err != nil {
+		err = writeDefaults(&config, configYaml)
+		if err != nil {
+			return config, err
+		}
+	} else {
+		err = loadConfig(&config, configYaml)
+		if err != nil {
+			return config, err
+		}
+	}
+
+	err = sanitiseConfigValues(config)
+	if err != nil {
+		return config, err
+	}
+
+	log.Println(config)
+	return config, nil
 }
 
-func checkHealth() {
-	_, err := os.Stat(config.AppInfo.AppDir)
+func sanitiseConfigValues(config Config) error {
+	// check if the ffmpeg recording paths exists
+	_, err := os.Stat(config.FfmpegRecordingsPath)
 	if err != nil {
-		createAppDirectory(config.AppInfo.AppDir)
+		return fmt.Errorf("Error sanitising configuration file values -> %v", err)
 	}
 
-	_, err = os.Stat(config.AppInfo.ConfigFileDir)
-	if err != nil {
-		createConfig(config.AppInfo.ConfigFileDir)
+	validInput := "1:0"
+	if config.AvfoundationDevice != validInput {
+		return fmt.Errorf("Error, invalid avfoundation input device. have '%s',  expected '%s...'", config.AvfoundationDevice, validInput)
 	}
+
+	return nil
 }
 
-func createAppDirectory(path string) {
-	err := os.MkdirAll(path, os.ModePerm)
+// create config file and write default values
+func writeDefaults(config *Config, configYaml string) error {
+	configFile, err := os.Create(configYaml)
 	if err != nil {
-		log.Fatalf("Error creating config dir: %v", err)
+		return err
 	}
-	fmt.Printf("Created directory: %s\n", path)
+	defer configFile.Close()
+
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = configFile.Write(data)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func createConfig(path string) {
-	file, err := os.Create(path)
+func loadConfig(config *Config, configYaml string) error {
+	contents, err := os.ReadFile(configYaml)
 	if err != nil {
-		log.Fatalf("Error creating config file: %v", err)
-
+		return err
 	}
-	defer file.Close()
 
-	writeDefaultConfig(file)
-	fmt.Printf("Written default config: %s\n", path)
-}
-
-func writeDefaultConfig(file *os.File) {
-	var defaultConfig = `# Configuration file for block-cli app.
-ffmpegRecordingsPath: ~/Downloads
-defaultDuration: 10.0`
-
-	_, err := file.WriteString(defaultConfig)
+	err = yaml.Unmarshal(contents, config)
 	if err != nil {
-		log.Fatalf("Error creating config file: %v", err)
-
+		return err
 	}
+
+	return nil
 }
