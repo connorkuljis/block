@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -59,7 +58,6 @@ func InitConfig() (Config, error) {
 		return config, err
 	}
 
-	log.Println(config)
 	return config, nil
 }
 

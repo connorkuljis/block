@@ -12,9 +12,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DBName = "app_data.db"
-
-// Task represents the structure of the database table
 type Task struct {
 	ID                int64           `db:"id"`
 	Name              string          `db:"name"`
@@ -29,8 +26,7 @@ type Task struct {
 	CompletionPercent sql.NullFloat64 `db:"completion_percent"`
 }
 
-var schema = `
-CREATE TABLE IF NOT EXISTS Tasks(
+var schema = `CREATE TABLE IF NOT EXISTS Tasks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     planned_duration_minutes REAL NOT NULL,
@@ -42,26 +38,29 @@ CREATE TABLE IF NOT EXISTS Tasks(
     finished_at TIMESTAMP,
     completed INTEGER,
     completion_percent REAL
-);
-`
+)`
 
-func InitDB() {
-	homeDir, err := os.UserHomeDir()
+const DBName = "app_data.db"
+
+func InitDB() (*sqlx.DB, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error, $HOME is not set -> %v", err)
 	}
 
-	dbFile := filepath.Join(homeDir, ConfigDir, DBName)
+	source := filepath.Join(home, ConfigDir, DBName)
 
-	db, err = sqlx.Connect("sqlite3", dbFile)
+	conn, err := sqlx.Connect("sqlite3", source)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error, unable to connect to database -> %v", err)
 	}
 
-	_, err = db.Exec(schema)
+	_, err = conn.Exec(schema)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
+
+	return conn, nil
 }
 
 func NewTask(inName string, inDuration float64) *Task {
@@ -109,10 +108,6 @@ func InsertTask(task *Task) *Task {
 		log.Fatal(err)
 	}
 
-	if flags.Verbose {
-		fmt.Printf("Last Inserted ID: %d\n", lastInsertID)
-	}
-
 	task.ID = lastInsertID
 
 	return task
@@ -151,13 +146,9 @@ func UpdateTask(inTask *Task) {
 		log.Fatal(err)
 	}
 
-	lastInsertID, err := result.LastInsertId()
+	_, err = result.LastInsertId()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if flags.Verbose {
-		fmt.Printf("Last Updated ID: %d\n", lastInsertID)
 	}
 }
 

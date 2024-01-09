@@ -11,44 +11,16 @@ import (
 
 const (
 	StopToken = "~"
+	HostsFile = "/etc/hosts"
 )
 
 type Blocker struct {
-	File string
+	HostsFile string
 }
 
 func NewBlocker() Blocker {
-	file := "/etc/hosts"
-	return Blocker{File: file}
+	return Blocker{HostsFile: HostsFile}
 }
-
-// func (b *Blocker) Start() error {
-// 	err := b.Block()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = resetDNS()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
-
-// func (b *Blocker) Stop() error {
-// 	err := b.Unblock()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = resetDNS()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func (b *Blocker) Unblock() error {
 	parseLineUnblock := func(line string) string {
@@ -79,18 +51,17 @@ func (b *Blocker) Block() error {
 }
 
 func (b *Blocker) UpdateBlockList(parseLine func(string) string) error {
-	hostsFile := b.File
-	var content []byte
+	var data []byte
 
-	hf, err := os.Open(hostsFile)
+	file, err := os.Open(b.HostsFile)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	sc := bufio.NewScanner(hf)
+	sc := bufio.NewScanner(file)
 
-	done := false
-
+	var done = false
 	for sc.Scan() {
 		line := sc.Text()
 		if !done && len(line) > 0 {
@@ -98,25 +69,21 @@ func (b *Blocker) UpdateBlockList(parseLine func(string) string) error {
 				done = true
 				break
 			}
-			line = parseLine(line) + "\n"
+			line = parseLine(line)
 		}
-		strBytes := []byte(line)
-		content = append(content, strBytes...)
+		strBytes := []byte(line + "\n")
+		data = append(data, strBytes...)
 	}
 
-	err = sc.Err()
-	if err != nil {
-		hf.Close()
+	if err = sc.Err(); err != nil {
 		return err
 	}
 
 	if flags.Verbose {
-		log.Println(string(content))
+		log.Println(string(data))
 	}
 
-	hf.Close()
-
-	err = truncateFile(content, hostsFile)
+	err = truncateFile(data, b.HostsFile)
 	if err != nil {
 		return err
 	}

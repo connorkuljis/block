@@ -27,17 +27,21 @@ type Flags struct {
 
 func main() {
 	var err error
+
 	cfg, err = InitConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	InitDB()
+	db, err = InitDB()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(historyCmd)
 	rootCmd.AddCommand(deleteTaskCmd)
-	rootCmd.AddCommand(resetDNSCommand)
+	rootCmd.AddCommand(resetDNSCmd)
 
 	err = rootCmd.Execute()
 	if err != nil {
@@ -68,21 +72,22 @@ Automatically unblock sites when the task is complete.`,
 var startCmd = &cobra.Command{
 	Use: "start",
 	Run: func(cmd *cobra.Command, args []string) {
+		var duration float64
+		var name string
+
 		myArgs, err := parseArgs(args)
 		if err != nil {
 			cmd.Usage()
 			log.Fatal(err)
 		}
 
-		name := myArgs.Name
-		duration := myArgs.Duration
+		duration = myArgs.Duration
+		name = myArgs.Name
 
 		currentTask = InsertTask(NewTask(name, duration))
-		// fmt.Printf("Setting a timer for %.1f minutes.\n", duration)
+		startTime := time.Now()
 
 		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
-
-		startTime := time.Now()
 
 		if flags.DisableBlocker {
 			startInteractiveTimer()
@@ -138,7 +143,7 @@ func stringToFloat(argStr string) interface{} {
 
 // first arg is either float or string
 func parseArgs(args []string) (Args, error) {
-	myArgs := Args{}
+	var myArgs = Args{}
 
 	if len(args) != 2 {
 		return myArgs, fmt.Errorf("Invalid number of arguments, expected 2, recieved: %d", len(args))
@@ -152,10 +157,8 @@ func parseArgs(args []string) (Args, error) {
 		return myArgs, fmt.Errorf("Error converting %s to float. Please provide a valid float.", inDuration)
 	}
 
-	myArgs = Args{
-		Duration: duration,
-		Name:     inName,
-	}
+	myArgs.Duration = duration
+	myArgs.Name = inName
 
 	return myArgs, nil
 }
@@ -175,26 +178,16 @@ func startInteractiveTimer() {
 		wg:     &sync.WaitGroup{},
 	}
 
+	r.wg.Add(2)
+	go RenderProgressBar(r)
+	go PollInput(r)
+
 	if flags.ScreenRecorder {
-		r.wg.Add(3)
-
-		fmt.Printf("Screen Recorder:\tstarted\n")
-
+		r.wg.Add(1)
 		go FfmpegCaptureScreen(r)
-		go RenderProgressBar(r)
-		go PollInput(r)
-
-		r.wg.Wait()
-
-		fmt.Printf("Screen Recorder:\tstopped\n")
-	} else {
-		r.wg.Add(2)
-
-		go RenderProgressBar(r)
-		go PollInput(r)
-
-		r.wg.Wait()
 	}
+
+	r.wg.Wait()
 }
 
 var historyCmd = &cobra.Command{
@@ -214,7 +207,7 @@ var deleteTaskCmd = &cobra.Command{
 	},
 }
 
-var resetDNSCommand = &cobra.Command{
+var resetDNSCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Reset DNS cache.",
 	Run: func(cmd *cobra.Command, args []string) {
