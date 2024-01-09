@@ -58,7 +58,14 @@ Use "block [command] --help" for more information about a command.
 
 # Install
 
-*note: requires `go`, you can install go here: [go.dev](https://go.dev/)*
+> To install the program, please read the instructions below:
+
+** important! **
+- `linux / mac`
+- requires `go`, *you can install go here: [go.dev](https://go.dev/)*
+- requires `ffmpeg` 
+- **screencapture** is only supported on `macOS`.
+
 
 ## Download
 `git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
