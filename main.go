@@ -89,9 +89,9 @@ var startCmd = &cobra.Command{
 		if flags.DisableBlocker {
 			startInteractiveTimer()
 		} else {
-			StartBlockerWrapper(b)
+			b.Start()
 			startInteractiveTimer()
-			StopBlockerWrapper(b)
+			b.Stop()
 		}
 
 		endTime := time.Now()
