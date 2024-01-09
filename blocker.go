@@ -22,33 +22,33 @@ func NewBlocker() Blocker {
 	return Blocker{File: file}
 }
 
-func (b *Blocker) Start() error {
-	err := b.Block()
-	if err != nil {
-		return err
-	}
+// func (b *Blocker) Start() error {
+// 	err := b.Block()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = resetDNS()
-	if err != nil {
-		return err
-	}
+// 	err = resetDNS()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
-func (b *Blocker) Stop() error {
-	err := b.Unblock()
-	if err != nil {
-		return err
-	}
+// func (b *Blocker) Stop() error {
+// 	err := b.Unblock()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	err = resetDNS()
-	if err != nil {
-		return err
-	}
+// 	err = resetDNS()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (b *Blocker) Unblock() error {
 	parseLineUnblock := func(line string) string {
@@ -149,7 +149,7 @@ func truncateFile(content []byte, destinationPath string) error {
 	return nil
 }
 
-func resetDNS() error {
+func ResetDNS() error {
 	if flags.Verbose {
 		fmt.Println("Flushing dscacheutil.")
 	}
