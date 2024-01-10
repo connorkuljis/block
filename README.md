@@ -2,21 +2,21 @@
 
 **block** reduces distractions from the command line. 
 
-The program immediately blocks and unblocks websites when a task is started or completes.
+Features:
+- 🙆 Pomodoro-like progress bar inidicator (right in your terminal!). 
+  - 🙅Automatically block/unblock any site at the IP level during the duration of the program.
+    - 📬 Alerted by a system notification when a session ends.
+- ⛳ Automatically record your progress.
+  - 📒 Answer 'what did I get done today' by running `block history`.
+- 󰑊 Capture your progress by enabling the screen recorder with `-x` or `--screen-recorder`.
+  - 🎥 Compile recordings into a time-lapse.
 
 
 ```
 ❯ block start 10 'draft emails' -x
 Setting a timer for 10.0 minutes.
 ESC or 'q' to exit. Press any key to pause.
-Blocker:                started
-Screen Recorder:        started
  100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
-Screen Recorder:        stopped
-Blocker:        stopped
-Start time:     7:25:44am
-End time:       7:35:51am
-Duration:       0 hours, 10 minutes and 0 seconds.
 ```
 
 # Mission
