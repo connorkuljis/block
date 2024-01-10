@@ -107,12 +107,6 @@ func truncateFile(content []byte, destinationPath string) error {
 		fmt.Println("File content overwritten successfully!")
 	}
 
-	// Change the file permissions to allow writing without elevated privileges
-	err = os.Chmod(destinationPath, 0666)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
