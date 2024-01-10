@@ -75,11 +75,6 @@ func sanitiseConfigValues(config Config) error {
 		return fmt.Errorf("Error sanitising configuration file values -> %v", err)
 	}
 
-	validInput := "1:0"
-	if config.AvfoundationDevice != validInput {
-		return fmt.Errorf("Error, invalid avfoundation input device. have '%s',  expected '%s...'", config.AvfoundationDevice, validInput)
-	}
-
 	return nil
 }
 
