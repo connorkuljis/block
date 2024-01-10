@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -34,14 +35,20 @@ func InitConfig() (Config, error) {
 	// check config path exists, if not create it
 	_, err = os.Stat(configPath)
 	if err != nil {
-		err := os.MkdirAll(configPath, os.ModePerm)
-		if err != nil {
+		if os.IsNotExist(err) {
+			log.Println("> Creating config directory.")
+			err := os.MkdirAll(configPath, os.ModePerm)
+			if err != nil {
+				return config, err
+			}
+		} else {
 			return config, err
 		}
 	}
 
 	_, err = os.Stat(configYaml)
 	if err != nil {
+		log.Println("> Creating config directory.")
 		err = writeDefaults(&config, configYaml)
 		if err != nil {
 			return config, err
