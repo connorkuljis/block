@@ -83,6 +83,8 @@ var startCmd = &cobra.Command{
 			fmt.Printf("End time:\t%s\n", endTime.Format("3:04:05pm"))
 			fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
 		}
+
+		fmt.Println("Goodbye.")
 	},
 }
 
