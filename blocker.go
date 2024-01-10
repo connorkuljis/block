@@ -68,7 +68,6 @@ func (b *Blocker) UpdateBlockList(parseLine func(string) string) error {
 		if !done && len(line) > 0 {
 			if strings.Contains(line, StopToken) {
 				done = true
-				break
 			}
 			line = parseLine(line)
 		}
