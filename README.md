@@ -1,6 +1,6 @@
 # block-cli
 
-**block** reduces distractions from the command line. 
+**block** eliminates distractions and saves you time from the command line. 
 
 Features:
 - 🙆 Pomodoro-like progress bar inidicator (right in your terminal!). 
@@ -10,6 +10,9 @@ Features:
   - 📒 Answer 'what did I get done today' by running `block history`.
 - 󰑊 Capture your progress by enabling the screen recorder with `-x` or `--screen-recorder`.
   - 🎥 Compile recordings into a time-lapse.
+- Cross-platform integration for `mac`, `linux` and `windows`.
+  - If you are having issues -> [https://github.com/connorkuljis/block-cli/issues](https://github.com/connorkuljis/block-cli/issues)
+- `YAML` file at `~/.config/block-cli/config.yaml`
 
 
 ```
@@ -36,6 +39,10 @@ Or perhaps sun bathing. Who knows. You get my idea. Lindy.
 
 # Usage
 ```
+Block saves you time by blocking websites at IP level.
+Progress bar is displayed directly in the terminal.
+Automatically unblock sites when the task is complete.
+
 Usage:
   block [flags]
   block [command]
@@ -45,6 +52,7 @@ Available Commands:
   delete      Deletes a task by given ID.
   help        Help about any command
   history     Show task history.
+  reset       Reset DNS cache.
   start
 
 Flags:
@@ -61,11 +69,8 @@ Use "block [command] --help" for more information about a command.
 > To install the program, please read the instructions below:
 
 ** important! **
-- `linux / mac`
 - requires `go`, *you can install go here: [go.dev](https://go.dev/)*
 - requires `ffmpeg` 
-- **screencapture** is only supported on `macOS`.
-
 
 ## Download
 `git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
@@ -97,42 +102,19 @@ Use "block [command] --help" for more information about a command.
 # 0.0.0.0 www.old.reddit.com
 # 0.0.0.0 old.reddit.com
 # 0.0.0.0 www.facebook.com
+# ~ <-- lines below this character will be untouched by block-cli
 
 ```
 
 - The program will uncomment the lines when you start the program, and add them back in when upon exit.
- - If you have content you dont want the program to manipulate, add the following line to the hosts file.
-
- `# ~ <-- lines below this will not be uncommented/commented by block-cli`
-
- in which the `~` acts as a delimiter.
+- If you have content you dont want the program to manipulate, add the following line to the hosts file.
 
 # Screen Recording with Ffmpeg
 
-If you have `ffmpeg` on you machine you can automatically capture your screen. It will be saved to `~/Downloads`.
+If you have `ffmpeg` on you machine you can automatically capture your screen. 
+
+Set a location to save by updating your `.config/block-cli/config.yaml` and adjust your `ffmpegRecordingsPath: /Volumes/WD_2TB/Screen-Recordings
+` like so.
 
 To record your screen use the `-x` flag.
-
-# Improvements:
-1. `resetDNS` only flushes the DNS cache on macos.
-2. Implement `.config` file for user settings (eg: screen capture directory, default task length...)
-
-
-## Optional
-
-Editing the /etc/hosts file typically requires administrative privileges, and for security reasons, it's not recommended to completely eliminate the password prompt when using sudo to modify system files. However, you can configure sudo to not prompt for a password for specific commands, as discussed earlier.
-
-If you want to allow the mv command on the /etc/hosts file without entering a password,  with a specific configuration for the mv command. Open the sudoers file using visudo:
-
-`sudo visudo`
-
-Add a line at the end of the file to allow running the mv command on the /etc/hosts file without entering a password:
-
-`your_username ALL=(ALL) NOPASSWD: /bin/mv /etc/hosts`
-
-Replace your_username with your actual username.
-
-Save and exit the editor.
-
-Now, when you use the mv command to move the /etc/hosts file, you won't be prompted for a password.
 
