@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 )
 
@@ -117,23 +118,24 @@ func truncateFile(content []byte, destinationPath string) error {
 }
 
 func ResetDNS() error {
-	if flags.Verbose {
-		fmt.Println("Flushing dscacheutil.")
-	}
+	if runtime.GOOS == "darwin" {
+		if flags.Verbose {
+			fmt.Println("Flushing dscacheutil.")
+		}
+		cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
 
-	cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	if flags.Verbose {
-		fmt.Println("Terminating mDNSResponder. ")
-	}
-	cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
-	err = cmd.Run()
-	if err != nil {
-		return err
+		if flags.Verbose {
+			fmt.Println("Terminating mDNSResponder. ")
+		}
+		cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
