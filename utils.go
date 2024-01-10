@@ -1,35 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-	"text/tabwriter"
+	"log"
+
+	"github.com/gen2brain/beeep"
 )
 
-func SendNotification(message string) {
-	cmd := exec.Command("terminal-notifier", "-title", "task-tracker-cli", "-sound", "default", "-message", message)
-	err := cmd.Start()
-	if err != nil {
-		fmt.Println(err.Error())
+func SendNotification() {
+	if flags.Verbose {
+		log.Println("Sending notification...")
 	}
-	cmd.Wait()
-}
 
-func DefaultTabWriter() *tabwriter.Writer {
-	output := os.Stdout
-	minWidth := 0
-	tabWidth := 8
-	padding := 4
-	padChar := '\t'
-	flags := 0
+	var icon = ""
 
-	return tabwriter.NewWriter(
-		output,
-		minWidth,
-		tabWidth,
-		padding,
-		byte(padChar),
-		uint(flags),
-	)
+	err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
+	if err != nil {
+		log.Printf("Error, could not send notification beep: %v", err)
+	}
+
+	err = beeep.Notify("block-cli", "Your session has finished!", icon)
+	if err != nil {
+		log.Printf("Error, could not send notification alert: %v", err)
+	}
+
+	if flags.Verbose {
+		log.Println("Notification sent!")
+	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -19,10 +18,6 @@ func progressBar(max int) *progressbar.ProgressBar {
 	)
 }
 
-func completeProgressBar() {
-	fmt.Println()
-}
-
 func RenderProgressBar(r Remote) {
 	calculateTotalTicks := func(minutes float64, tickIntervalMs int) int {
 		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
@@ -38,19 +33,14 @@ func RenderProgressBar(r Remote) {
 	for {
 		select {
 		case <-r.Cancel:
-			completeProgressBar()
-			currentTask.CompletionPercent = sql.NullFloat64{Float64: bar.State().CurrentPercent * 100, Valid: true}
+			cancel(bar)
 			r.wg.Done()
 			return
 		case <-r.Pause:
 			<-r.Pause
 		default:
 			if i == max {
-				// TODO: fix notifications
-				SendNotification("Complete")
-				completeProgressBar()
-				currentTask.Completed = 1
-				currentTask.CompletionPercent = sql.NullFloat64{Float64: bar.State().CurrentPercent * 100, Valid: true}
+				finish(bar)
 				close(r.Finish)
 				r.wg.Done()
 				return
@@ -61,4 +51,17 @@ func RenderProgressBar(r Remote) {
 			time.Sleep(time.Millisecond * time.Duration(interval))
 		}
 	}
+}
+
+func cancel(bar *progressbar.ProgressBar) {
+	fmt.Println()
+	currentTask.CompletionPercent.Float64 = bar.State().CurrentPercent
+	currentTask.CompletionPercent.Valid = true
+}
+
+func finish(bar *progressbar.ProgressBar) {
+	fmt.Println()
+	currentTask.CompletionPercent.Float64 = bar.State().CurrentPercent
+	currentTask.CompletionPercent.Valid = true
+	SendNotification()
 }
