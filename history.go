@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 )
 
-func RenderHistory() {
+func RenderTable(tasks []Task) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"ID", "Date", "Name", "Planned (min)", "Actual (min)", "Completion Percent", "Completed"})
 	table.SetAutoWrapText(false)
@@ -22,8 +23,7 @@ func RenderHistory() {
 	table.SetTablePadding("\t") // pad with tabs
 	table.SetNoWhiteSpace(true)
 
-	tasks := GetAllTasks()
-
+	totalMinutes := 0.0
 	for _, task := range tasks {
 		id := fmt.Sprint(task.ID)
 		name := task.Name
@@ -40,8 +40,14 @@ func RenderHistory() {
 
 		row := []string{id, date, name, planned, actual, completionPercent, completed}
 
+		if task.ActualDuration.Valid {
+			totalMinutes += task.ActualDuration.Float64
+		}
+
 		table.Append(row)
 	}
-
 	table.Render()
+
+	fmt.Println()
+	color.Cyan(fmt.Sprintf("Total: %.0f minutes", totalMinutes))
 }

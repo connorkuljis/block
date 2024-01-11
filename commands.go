@@ -11,11 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type Args struct {
-	Name     string
-	Duration float64
-}
-
 type Remote struct {
 	wg     *sync.WaitGroup
 	Pause  chan bool
@@ -38,13 +33,19 @@ Automatically unblock sites when the task is complete.`,
 var startCmd = &cobra.Command{
 	Use: "start",
 	Run: func(cmd *cobra.Command, args []string) {
-		myArgs, err := parseArgs(args)
-		if err != nil {
-			cmd.Usage()
-			log.Fatal(err)
+		if len(args) != 2 {
+			log.Fatal(fmt.Errorf("Invalid number of arguments, expected 2, recieved: %d", len(args)))
 		}
 
-		currentTask = InsertTask(NewTask(myArgs.Name, myArgs.Duration))
+		durationStr := args[0]
+		name := args[1]
+
+		duration, err := strconv.ParseFloat(durationStr, 64)
+		if err != nil {
+			log.Fatal(fmt.Errorf("Error converting %s to float. Please provide a valid float.", durationStr))
+		}
+
+		currentTask = InsertTask(NewTask(name, duration))
 		createdAt := time.Now()
 
 		var b Blocker
@@ -106,7 +107,11 @@ var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "Show task history.",
 	Run: func(cmd *cobra.Command, args []string) {
-		RenderHistory()
+		tasks, err := GetAllTasks()
+		if err != nil {
+			log.Fatal(err)
+		}
+		RenderTable(tasks)
 	},
 }
 
@@ -134,23 +139,23 @@ var resetDNSCmd = &cobra.Command{
 	},
 }
 
-func parseArgs(args []string) (Args, error) {
-	var myArgs = Args{}
+var todayCmd = &cobra.Command{
+	Use: "today",
+	Run: func(cmd *cobra.Command, args []string) {
+		tasks, err := GetAllTasks()
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	if len(args) != 2 {
-		return myArgs, fmt.Errorf("Invalid number of arguments, expected 2, recieved: %d", len(args))
-	}
+		var today []Task
+		now := time.Now()
+		for _, t := range tasks {
+			createdAt := t.CreatedAt
+			if now.Year() == createdAt.Year() && now.Month() == createdAt.Month() && now.Day() == createdAt.Day() {
+				today = append(today, t)
+			}
+		}
 
-	inDuration := args[0]
-	inName := args[1]
-
-	duration, err := strconv.ParseFloat(inDuration, 64)
-	if err != nil {
-		return myArgs, fmt.Errorf("Error converting %s to float. Please provide a valid float.", inDuration)
-	}
-
-	myArgs.Duration = duration
-	myArgs.Name = inName
-
-	return myArgs, nil
+		RenderTable(today)
+	},
 }

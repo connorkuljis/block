@@ -98,13 +98,15 @@ func GetTaskByID(id int64) Task {
 	return task
 }
 
-func GetAllTasks() []Task {
+func GetAllTasks() ([]Task, error) {
 	var tasks []Task
+
 	err := db.Select(&tasks, "SELECT * FROM Tasks")
 	if err != nil {
-		log.Fatal(err)
+		return tasks, nil
 	}
-	return tasks
+
+	return tasks, nil
 }
 
 func UpdateFinishTimeAndDuration(task Task, finishedAt time.Time, acturalDuration time.Duration) error {

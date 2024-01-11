@@ -34,14 +34,14 @@ func RenderProgressBar(r Remote) {
 	for {
 		select {
 		case <-r.Cancel:
-			recordBarState(bar)
+			saveBarState(bar)
 			r.wg.Done()
 			return
 		case <-r.Pause:
 			<-r.Pause
 		default:
 			if i == max {
-				recordBarState(bar)
+				saveBarState(bar)
 				SendNotification()
 				close(r.Finish)
 				r.wg.Done()
@@ -55,7 +55,7 @@ func RenderProgressBar(r Remote) {
 	}
 }
 
-func recordBarState(bar *progressbar.ProgressBar) {
+func saveBarState(bar *progressbar.ProgressBar) {
 	fmt.Println()
 
 	task := currentTask

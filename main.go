@@ -35,14 +35,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println(cfg)
-
 	if err = initDB(); err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	rootCmd.AddCommand(startCmd, historyCmd, deleteTaskCmd, resetDNSCmd)
+	rootCmd.AddCommand(
+		startCmd,
+		historyCmd,
+		deleteTaskCmd,
+		resetDNSCmd,
+	)
+
+	historyCmd.AddCommand(todayCmd)
 
 	if err = rootCmd.Execute(); err != nil {
 		log.Fatal(err)
