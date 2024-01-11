@@ -4,11 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -40,31 +37,8 @@ var schema = `CREATE TABLE IF NOT EXISTS Tasks(
     completion_percent REAL
 )`
 
-const DBName = "app_data.db"
-
-func InitDB() (*sqlx.DB, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("Error, $HOME is not set -> %v", err)
-	}
-
-	source := filepath.Join(home, ConfigDir, DBName)
-
-	conn, err := sqlx.Connect("sqlite3", source)
-	if err != nil {
-		return nil, fmt.Errorf("Error, unable to connect to database -> %v", err)
-	}
-
-	_, err = conn.Exec(schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
-}
-
-func NewTask(inName string, inDuration float64) *Task {
-	return &Task{
+func NewTask(inName string, inDuration float64) Task {
+	return Task{
 		Name:              inName,
 		PlannedDuration:   inDuration,
 		ActualDuration:    sql.NullFloat64{Valid: false},
@@ -78,7 +52,7 @@ func NewTask(inName string, inDuration float64) *Task {
 	}
 }
 
-func InsertTask(task *Task) *Task {
+func InsertTask(task Task) Task {
 	insertQuery := `INSERT INTO Tasks (
 	name, 
 	planned_duration_minutes, 
@@ -133,59 +107,88 @@ func GetAllTasks() []Task {
 	return tasks
 }
 
-func UpdateTask(inTask *Task) {
-	updateQuery := `UPDATE Tasks SET 
-	finished_at = :finished_at,
-	actual_duration_minutes = :actual_duration_minutes,
-	completed = :completed,
-	completion_percent = :completion_percent
-	WHERE id = :id`
+func UpdateFinishTimeAndDuration(task Task, finishedAt time.Time, acturalDuration time.Duration) error {
+	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ? WHERE id = ?"
 
-	result, err := db.NamedExec(updateQuery, inTask)
+	parsedFinishedAt := sql.NullTime{
+		Time:  finishedAt,
+		Valid: true,
+	}
+
+	parsedActualDuration := sql.NullFloat64{
+		Float64: acturalDuration.Minutes() * 100,
+		Valid:   true,
+	}
+
+	result, err := db.Exec(query, parsedFinishedAt, parsedActualDuration, task.ID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	_, err = result.LastInsertId()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
 
-func UpdateTaskVodByID(id int64, filename string) {
-	updateQuery := `UPDATE Tasks SET 
-	screen_url = $1 
-	WHERE id = $2`
+func UpdateScreenURL(task Task, target string) error {
+	query := "UPDATE Tasks SET screen_url = ? WHERE id = ?"
 
-	result, err := db.Exec(updateQuery, filename, id)
+	result, err := db.Exec(query, target, task.ID)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	lastInsertID, err := result.LastInsertId()
+	_, err = result.LastInsertId()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	if flags.Verbose {
-		log.Printf("Updated row id = %d\n", lastInsertID)
-	}
+	return nil
 }
 
-func DeleteTaskByID(id string) {
-	q := `DELETE FROM Tasks WHERE id = $1`
+func UpdateCompletionPercent(task Task, completionPercent float64) error {
+	query := "UPDATE Tasks SET completion_percent = ?, completed = ? WHERE id = ?"
 
-	result, err := db.Exec(q, id)
-	if err != nil {
-		log.Fatal(err)
+	parsedCompletionPercent := sql.NullFloat64{
+		Float64: completionPercent,
+		Valid:   true,
 	}
 
-	r, err := result.RowsAffected()
-	if err != nil {
-		log.Fatal(err)
+	completed := 0
+	if completionPercent == 100.0 {
+		completed = 1
 	}
 
-	fmt.Printf("Deleted task %s, (%d rows affected.)\n", id, r)
+	result, err := db.Exec(query, parsedCompletionPercent, completed, task.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteTaskByID(id string) error {
+	query := "DELETE FROM Tasks WHERE id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func boolToInt(cond bool) int {

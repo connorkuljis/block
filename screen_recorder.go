@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -13,21 +12,21 @@ import (
 	"time"
 )
 
-func targetFilename() string {
-	timestamp := time.Now().Format("2006-01-02_15-04-05")
-	taskName := currentTask.Name
-	filetype := ".mkv"
-	filename := ""
+// generates an path combining the current timestamp, taskname and filetype
+func generateScreenRecordingName() string {
+	var parts []string
+	parts = append(parts, time.Now().Format("2006-01-02_15-04-05"))
+	parts = append(parts, strings.ReplaceAll(currentTask.Name, " ", "_"))
+	parts = append(parts, ".mkv")
 
-	taskName = strings.ReplaceAll(taskName, " ", "_")
-	filename = fmt.Sprintf("%s-%s%s", timestamp, taskName, filetype)
+	filename := strings.Join(parts, "-")
 
-	return filepath.Join(cfg.FfmpegRecordingsPath, filename)
+	return filename
 }
 
 func FfmpegCaptureScreen(r Remote) {
-
-	target := targetFilename()
+	filename := generateScreenRecordingName()
+	target := filepath.Join(cfg.FfmpegRecordingsPath, filename)
 
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -86,9 +85,8 @@ func FfmpegCaptureScreen(r Remote) {
 		terminate(cmd)
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		log.Print(err) // 255 exit code is expected.
+	if err = cmd.Wait(); err != nil {
+		log.Print(err) // 255 exit code is expected to be logged on success.
 	}
 
 	_, err = os.Stat(target)
@@ -96,14 +94,18 @@ func FfmpegCaptureScreen(r Remote) {
 		log.Print(err)
 		log.Print(stdout.String())
 		log.Print(stderr.String())
-	} else {
-		log.Print("Successfully captured screen recording at:")
-		log.Print(target)
-		UpdateTaskVodByID(currentTask.ID, target)
+		r.wg.Done()
+		return
+	}
+
+	log.Print("Successfully captured screen recording at:")
+	log.Print(target)
+
+	if err = UpdateScreenURL(currentTask, filename); err != nil {
+		log.Print(err)
 	}
 
 	r.wg.Done()
-	return
 }
 
 func terminate(cmd *exec.Cmd) {

@@ -1,18 +1,26 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 type Args struct {
 	Name     string
 	Duration float64
+}
+
+type Remote struct {
+	wg     *sync.WaitGroup
+	Pause  chan bool
+	Cancel chan bool
+	Finish chan bool
 }
 
 var rootCmd = &cobra.Command{
@@ -30,58 +38,64 @@ Automatically unblock sites when the task is complete.`,
 var startCmd = &cobra.Command{
 	Use: "start",
 	Run: func(cmd *cobra.Command, args []string) {
-		var duration float64
-		var name string
-
 		myArgs, err := parseArgs(args)
 		if err != nil {
 			cmd.Usage()
 			log.Fatal(err)
 		}
 
-		duration = myArgs.Duration
-		name = myArgs.Name
+		currentTask = InsertTask(NewTask(myArgs.Name, myArgs.Duration))
+		createdAt := time.Now()
 
-		currentTask = InsertTask(NewTask(name, duration))
-		startTime := time.Now()
-
-		fmt.Printf("ESC or 'q' to exit. Press any key to pause.\n")
-
-		if flags.DisableBlocker {
-			start()
-		} else {
-			b := NewBlocker()
-
-			err := b.Block()
-			if err != nil {
+		var b Blocker
+		useBlocker := !flags.DisableBlocker
+		if useBlocker {
+			b = NewBlocker()
+			if err := b.Block(); err != nil {
 				log.Fatal(err)
 			}
-
-			err = ResetDNS()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			start()
-
-			err = b.Unblock()
-			if err != nil {
+			if err = ResetDNS(); err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		endTime := time.Now()
-		totalTime := endTime.Sub(startTime)
+		color.Red("ESC or 'q' to exit. Press any key to pause.")
 
-		currentTask.FinishedAt = sql.NullTime{Time: endTime, Valid: true}
-		currentTask.ActualDuration = sql.NullFloat64{Float64: totalTime.Minutes(), Valid: true}
+		r := Remote{
+			wg:     &sync.WaitGroup{},
+			Pause:  make(chan bool, 1),
+			Cancel: make(chan bool, 1),
+			Finish: make(chan bool, 1),
+		}
 
-		UpdateTask(currentTask)
+		r.wg.Add(2)
+		go RenderProgressBar(r)
+		go PollInput(r)
+
+		if flags.ScreenRecorder {
+			r.wg.Add(1)
+			go FfmpegCaptureScreen(r)
+		}
+
+		r.wg.Wait()
+
+		if useBlocker {
+			if err = b.Unblock(); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		finishedAt := time.Now()
+		actualDuration := finishedAt.Sub(createdAt)
+
+		if err = UpdateFinishTimeAndDuration(currentTask, finishedAt, actualDuration); err != nil {
+			log.Fatal(err)
+		}
 
 		if flags.Verbose {
-			fmt.Printf("Start time:\t%s\n", startTime.Format("3:04:05pm"))
-			fmt.Printf("End time:\t%s\n", endTime.Format("3:04:05pm"))
-			fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(totalTime.Hours()), int(totalTime.Minutes())%60, int(totalTime.Seconds())%60)
+			fmt.Printf("Start time:\t%s\n", createdAt.Format("3:04:05pm"))
+			fmt.Printf("End time:\t%s\n", finishedAt.Format("3:04:05pm"))
+			fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(actualDuration.Hours()), int(actualDuration.Minutes())%60, int(actualDuration.Seconds())%60)
 		}
 
 		fmt.Println("Goodbye.")
@@ -101,7 +115,10 @@ var deleteTaskCmd = &cobra.Command{
 	Short: "Deletes a task by given ID.",
 	Run: func(cmd *cobra.Command, args []string) {
 		id := args[0]
-		DeleteTaskByID(id)
+		err := DeleteTaskByID(id)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -10,87 +8,79 @@ import (
 )
 
 type Config struct {
+	Path                 string
+	Yaml                 string
 	FfmpegRecordingsPath string `yaml:"ffmpegRecordingsPath"`
 	AvfoundationDevice   string `yaml:"avfoundationDevice"`
 }
 
-const (
-	ConfigDir = ".config/block-cli"
-	YamlFile  = "config.yaml"
-)
-
-func InitConfig() (Config, error) {
-	var config Config
-	config.FfmpegRecordingsPath = "."
-	config.AvfoundationDevice = "1:0"
+func initConfig() error {
+	const (
+		ConfigDir = ".config/block-cli"
+		YamlFile  = "config.yaml"
+	)
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return config, err
+		return err
 	}
 
-	configPath := filepath.Join(homeDir, ConfigDir)
-	configYaml := filepath.Join(configPath, YamlFile)
+	path := filepath.Join(homeDir, ConfigDir)
+	yaml := filepath.Join(path, YamlFile)
 
-	// check config path exists, if not create it
-	_, err = os.Stat(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.Println("> Creating config directory.")
-			err := os.MkdirAll(configPath, os.ModePerm)
-			if err != nil {
-				return config, err
-			}
-		} else {
-			return config, err
-		}
+	cfg = Config{
+		Path:                 path,
+		Yaml:                 yaml,
+		FfmpegRecordingsPath: ".",
+		AvfoundationDevice:   "1:0",
 	}
 
-	_, err = os.Stat(configYaml)
-	if err != nil {
-		log.Println("> Creating config directory.")
-		err = writeDefaults(&config, configYaml)
-		if err != nil {
-			return config, err
-		}
-	} else {
-		err = loadConfig(&config, configYaml)
-		if err != nil {
-			return config, err
-		}
+	if err := makeDirectoryIfNotExists(); err != nil {
+		return err
 	}
 
-	err = sanitiseConfigValues(config)
-	if err != nil {
-		return config, err
-	}
-
-	return config, nil
-}
-
-func sanitiseConfigValues(config Config) error {
-	// check if the ffmpeg recording paths exists
-	_, err := os.Stat(config.FfmpegRecordingsPath)
-	if err != nil {
-		return fmt.Errorf("Error sanitising configuration file values -> %v", err)
+	if err := createOrLoadYamlFileIfNotExists(); err != nil {
+		return err
 	}
 
 	return nil
 }
 
+func makeDirectoryIfNotExists() error {
+	_, err := os.Stat(cfg.Path)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(cfg.Path, os.ModePerm); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createOrLoadYamlFileIfNotExists() error {
+	_, err := os.Stat(cfg.Yaml)
+	if os.IsNotExist(err) {
+		if err = writeDefaultConfigurationYaml(); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		loadConfig()
+		sanitiseConfigValues()
+	}
+	return nil
+}
+
 // create config file and write default values
-func writeDefaults(config *Config, configYaml string) error {
-	configFile, err := os.Create(configYaml)
+func writeDefaultConfigurationYaml() error {
+	configFile, err := os.Create(cfg.Yaml)
 	if err != nil {
 		return err
 	}
 	defer configFile.Close()
-
-	data, err := yaml.Marshal(config)
+	data, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return err
 	}
-
 	_, err = configFile.Write(data)
 	if err != nil {
 		return err
@@ -98,16 +88,20 @@ func writeDefaults(config *Config, configYaml string) error {
 	return nil
 }
 
-func loadConfig(config *Config, configYaml string) error {
-	contents, err := os.ReadFile(configYaml)
+func loadConfig() error {
+	contents, err := os.ReadFile(cfg.Yaml)
 	if err != nil {
 		return err
 	}
-
-	err = yaml.Unmarshal(contents, config)
-	if err != nil {
+	if err = yaml.Unmarshal(contents, &cfg); err != nil {
 		return err
 	}
+	return nil
+}
 
+func sanitiseConfigValues() error {
+	if _, err := os.Stat(cfg.FfmpegRecordingsPath); err != nil {
+		return err
+	}
 	return nil
 }

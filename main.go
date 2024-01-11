@@ -2,29 +2,24 @@ package main
 
 import (
 	"log"
-	"sync"
+	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
 )
 
+const DBName = "app_data.db"
+
 var (
-	db          *sqlx.DB
-	currentTask *Task
-	cfg         Config
 	flags       Flags
+	cfg         Config
+	currentTask Task
+	db          *sqlx.DB
 )
 
 type Flags struct {
 	DisableBlocker bool
 	ScreenRecorder bool
 	Verbose        bool
-}
-
-type Remote struct {
-	Pause  chan bool
-	Cancel chan bool
-	Finish chan bool
-	wg     *sync.WaitGroup
 }
 
 func init() {
@@ -36,42 +31,36 @@ func init() {
 func main() {
 	var err error
 
-	cfg, err = InitConfig()
-	if err != nil {
+	if err := initConfig(); err != nil {
 		log.Fatal(err)
 	}
 
-	db, err = InitDB()
-	if err != nil {
+	log.Println(cfg)
+
+	if err = initDB(); err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 
 	rootCmd.AddCommand(startCmd, historyCmd, deleteTaskCmd, resetDNSCmd)
 
-	err = rootCmd.Execute()
-	if err != nil {
+	if err = rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
-
-	db.Close()
 }
 
-func start() {
-	r := Remote{
-		Pause:  make(chan bool, 1),
-		Cancel: make(chan bool, 1),
-		Finish: make(chan bool, 1),
-		wg:     &sync.WaitGroup{},
+func initDB() error {
+	var err error
+
+	db, err = sqlx.Connect("sqlite3", filepath.Join(cfg.Path, DBName))
+	if err != nil {
+		return err
 	}
 
-	r.wg.Add(2)
-	go RenderProgressBar(r)
-	go PollInput(r)
-
-	if flags.ScreenRecorder {
-		r.wg.Add(1)
-		go FfmpegCaptureScreen(r)
+	_, err = db.Exec(schema)
+	if err != nil {
+		return err
 	}
 
-	r.wg.Wait()
+	return nil
 }

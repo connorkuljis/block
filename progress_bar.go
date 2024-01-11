@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
@@ -33,14 +34,15 @@ func RenderProgressBar(r Remote) {
 	for {
 		select {
 		case <-r.Cancel:
-			cancel(bar)
+			recordBarState(bar)
 			r.wg.Done()
 			return
 		case <-r.Pause:
 			<-r.Pause
 		default:
 			if i == max {
-				finish(bar)
+				recordBarState(bar)
+				SendNotification()
 				close(r.Finish)
 				r.wg.Done()
 				return
@@ -53,15 +55,13 @@ func RenderProgressBar(r Remote) {
 	}
 }
 
-func cancel(bar *progressbar.ProgressBar) {
+func recordBarState(bar *progressbar.ProgressBar) {
 	fmt.Println()
-	currentTask.CompletionPercent.Float64 = bar.State().CurrentPercent
-	currentTask.CompletionPercent.Valid = true
-}
 
-func finish(bar *progressbar.ProgressBar) {
-	fmt.Println()
-	currentTask.CompletionPercent.Float64 = bar.State().CurrentPercent
-	currentTask.CompletionPercent.Valid = true
-	SendNotification()
+	task := currentTask
+	percent := bar.State().CurrentPercent * 100
+
+	if err := UpdateCompletionPercent(task, percent); err != nil {
+		log.Print(err)
+	}
 }
