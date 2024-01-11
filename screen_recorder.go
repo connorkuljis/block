@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -11,7 +13,7 @@ import (
 	"time"
 )
 
-func FfmpegCaptureScreen(r Remote) {
+func targetFilename() string {
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	taskName := currentTask.Name
 	filetype := ".mkv"
@@ -20,9 +22,12 @@ func FfmpegCaptureScreen(r Remote) {
 	taskName = strings.ReplaceAll(taskName, " ", "_")
 	filename = fmt.Sprintf("%s-%s%s", timestamp, taskName, filetype)
 
-	filepath := filepath.Join(cfg.FfmpegRecordingsPath, filename)
+	return filepath.Join(cfg.FfmpegRecordingsPath, filename)
+}
 
-	fmt.Println("Saving recording to: " + filepath)
+func FfmpegCaptureScreen(r Remote) {
+
+	target := targetFilename()
 
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -34,9 +39,10 @@ func FfmpegCaptureScreen(r Remote) {
 			"-i", inputs,
 			"-pix_fmt", "yuv420p",
 			"-r", "25",
-			filepath,
+			target,
 		)
 	case "linux":
+		log.Println("Warning. Screen capture is experiemental on linux")
 		res := "1920x1080"
 		cmd = exec.Command(
 			"ffmpeg",
@@ -44,14 +50,15 @@ func FfmpegCaptureScreen(r Remote) {
 			"-framerate", "25",
 			"-f", "x11grab",
 			"-i", ":0,0",
-			filepath,
+			target,
 		)
 	case "windows":
+		log.Println("Warning. Screen capture is experiemental on windows")
 		cmd = exec.Command(
 			"ffmpeg",
 			"-f", "dshow",
 			"-i", "video=screen-capture-recorder",
-			filepath,
+			target,
 		)
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
@@ -59,22 +66,49 @@ func FfmpegCaptureScreen(r Remote) {
 		return
 	}
 
+	log.Println("Starting screen recorder.")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
 	err := cmd.Start()
 	if err != nil {
-		log.Println("Error executing ffmpeg: " + err.Error())
+		log.Print(err)
 		r.wg.Done()
 		return
 	}
 
 	select {
 	case <-r.Cancel:
-		cmd.Process.Signal(syscall.SIGTERM)
+		terminate(cmd)
 	case <-r.Finish:
-		cmd.Process.Signal(syscall.SIGTERM)
+		terminate(cmd)
 	}
 
-	UpdateTaskVodByID(currentTask.ID, filepath)
+	err = cmd.Wait()
+	if err != nil {
+		log.Print(err) // 255 exit code is expected.
+	}
+
+	_, err = os.Stat(target)
+	if err != nil {
+		log.Print(err)
+		log.Print(stdout.String())
+		log.Print(stderr.String())
+	} else {
+		log.Print("Successfully captured screen recording at:")
+		log.Print(target)
+		UpdateTaskVodByID(currentTask.ID, target)
+	}
 
 	r.wg.Done()
 	return
+}
+
+func terminate(cmd *exec.Cmd) {
+	err := cmd.Process.Signal(syscall.SIGTERM)
+	if err != nil {
+		log.Print(err)
+	}
 }

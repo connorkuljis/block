@@ -168,7 +168,7 @@ func UpdateTaskVodByID(id int64, filename string) {
 	}
 
 	if flags.Verbose {
-		fmt.Printf("Updated vod: %d\n", lastInsertID)
+		log.Printf("Updated row id = %d\n", lastInsertID)
 	}
 }
 
