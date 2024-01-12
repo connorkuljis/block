@@ -118,7 +118,7 @@ func UpdateFinishTimeAndDuration(task Task, finishedAt time.Time, acturalDuratio
 	}
 
 	parsedActualDuration := sql.NullFloat64{
-		Float64: acturalDuration.Minutes() * 100,
+		Float64: acturalDuration.Minutes(),
 		Valid:   true,
 	}
 
