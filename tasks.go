@@ -109,20 +109,20 @@ func GetAllTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-func UpdateFinishTimeAndDuration(task Task, finishedAt time.Time, acturalDuration time.Duration) error {
+func UpdateFinishTimeAndDuration(task Task, inFinishedAt time.Time, inActuralDuration time.Duration) error {
 	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ? WHERE id = ?"
 
-	parsedFinishedAt := sql.NullTime{
-		Time:  finishedAt,
+	finishedAt := sql.NullTime{
+		Time:  inFinishedAt,
 		Valid: true,
 	}
 
-	parsedActualDuration := sql.NullFloat64{
-		Float64: acturalDuration.Minutes(),
+	actualDuration := sql.NullFloat64{
+		Float64: inActuralDuration.Minutes(),
 		Valid:   true,
 	}
 
-	result, err := db.Exec(query, parsedFinishedAt, parsedActualDuration, task.ID)
+	result, err := db.Exec(query, finishedAt, actualDuration, task.ID)
 	if err != nil {
 		return err
 	}
@@ -151,20 +151,20 @@ func UpdateScreenURL(task Task, target string) error {
 	return nil
 }
 
-func UpdateCompletionPercent(task Task, completionPercent float64) error {
+func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 	query := "UPDATE Tasks SET completion_percent = ?, completed = ? WHERE id = ?"
 
-	parsedCompletionPercent := sql.NullFloat64{
-		Float64: completionPercent,
+	completionPercent := sql.NullFloat64{
+		Float64: inCompletionPercent,
 		Valid:   true,
 	}
 
 	completed := 0
-	if completionPercent == 100.0 {
+	if inCompletionPercent == 100.0 {
 		completed = 1
 	}
 
-	result, err := db.Exec(query, parsedCompletionPercent, completed, task.ID)
+	result, err := db.Exec(query, completionPercent, completed, inTask.ID)
 	if err != nil {
 		return err
 	}

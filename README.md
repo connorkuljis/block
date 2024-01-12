@@ -2,6 +2,7 @@
 
 **block** eliminates distractions and saves you time from the command line. 
 
+
 Features:
 - 🙆 Pomodoro-like progress bar inidicator (right in your terminal!). 
   - 🙅Automatically block/unblock any site at the IP level during the duration of the program.
@@ -14,6 +15,7 @@ Features:
   - If you are having issues -> [https://github.com/connorkuljis/block-cli/issues](https://github.com/connorkuljis/block-cli/issues)
 - `YAML` file at `~/.config/block-cli/config.yaml`
 
+![demo](demo.gif)
 
 ```
 ❯ block start 10 'draft emails' -x
