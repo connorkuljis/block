@@ -23,6 +23,15 @@ type Flags struct {
 }
 
 func init() {
+	rootCmd.AddCommand(
+		startCmd,
+		historyCmd,
+		deleteTaskCmd,
+		resetDNSCmd,
+	)
+
+	historyCmd.AddCommand(todayCmd)
+
 	rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
 	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
 	rootCmd.PersistentFlags().BoolVarP(&flags.Verbose, "verbose", "v", false, "Logs additional details.")
@@ -39,15 +48,6 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	rootCmd.AddCommand(
-		startCmd,
-		historyCmd,
-		deleteTaskCmd,
-		resetDNSCmd,
-	)
-
-	historyCmd.AddCommand(todayCmd)
 
 	if err = rootCmd.Execute(); err != nil {
 		log.Fatal(err)
