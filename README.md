@@ -2,6 +2,13 @@
 
 **block** eliminates distractions and saves you time from the command line. 
 
+![demo](demo.gif)
+
+# Mission
+
+Spend less time on the computer and more time in the sun.
+
+---
 
 Features:
 - 🙆 Pomodoro-like progress bar inidicator (right in your terminal!). 
@@ -15,7 +22,6 @@ Features:
   - If you are having issues -> [https://github.com/connorkuljis/block-cli/issues](https://github.com/connorkuljis/block-cli/issues)
 - `YAML` file at `~/.config/block-cli/config.yaml`
 
-![demo](demo.gif)
 
 ```
 ❯ block start 10 'draft emails' -x
@@ -24,11 +30,6 @@ ESC or 'q' to exit. Press any key to pause.
  100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
 ```
 
-# Mission
-
-Spend less time on the computer and more time in the sun.
-
----
 
 > One must be concious of the time he spends on the internet.
 It should be an event. Coming onto the net. Endless information and oppportunity.
