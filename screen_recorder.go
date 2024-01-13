@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -113,4 +114,37 @@ func terminate(cmd *exec.Cmd) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func FfmpegGenerateTimelapse(files []string) (string, error) {
+	var args []string
+	outputFile := filepath.Join(cfg.FfmpegRecordingsPath, "output.mp4")
+
+	// -i 2024-01-11_15-55-52-focus.mkv \
+	// -i 2024-01-10_14-48-03-sesh.mkv \
+	for _, file := range files {
+		args = append(args, "-i")
+		args = append(args, filepath.Join(cfg.FfmpegRecordingsPath, file))
+	}
+
+	// -vf "setpts=PTS/15" -an out.mp4
+	args = append(args, "-vf")
+	args = append(args, "setpts=PTS/60")
+	args = append(args, "-an")
+	args = append(args, outputFile)
+
+	log.Println("Generating timelapse.")
+	for _, a := range args {
+		fmt.Println(a)
+	}
+
+	cmd := exec.Command("ffmpeg", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return outputFile, nil
 }

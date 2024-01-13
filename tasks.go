@@ -193,10 +193,39 @@ func DeleteTaskByID(id string) error {
 	return nil
 }
 
-func boolToInt(cond bool) int {
-	var v int
-	if cond {
-		v = 1
+// func GetTasksByDate(inDate time.Time) ([]Task, error) {
+// 	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE(?)`
+
+// 	var tasks []Task
+
+// 	err := db.Select(&tasks, query)
+// }
+
+func GetTodaysTasks() ([]Task, error) {
+	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE('now')`
+
+	var tasks []Task
+
+	err := db.Select(&tasks, query)
+	if err != nil {
+		return tasks, nil
 	}
-	return v
+
+	return tasks, nil
+}
+
+func GetTodaysCompletedCapturedTasks() ([]Task, error) {
+	query := `SELECT * FROM Tasks 
+	WHERE DATE(created_at) = DATE('now')
+	AND completed = 1
+	AND screen_enabled = 1`
+
+	var tasks []Task
+
+	err := db.Select(&tasks, query)
+	if err != nil {
+		return tasks, nil
+	}
+
+	return tasks, nil
 }

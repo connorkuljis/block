@@ -142,20 +142,44 @@ var resetDNSCmd = &cobra.Command{
 var todayCmd = &cobra.Command{
 	Use: "today",
 	Run: func(cmd *cobra.Command, args []string) {
-		tasks, err := GetAllTasks()
+		tasks, err := GetTodaysCompletedCapturedTasks()
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		var today []Task
-		now := time.Now()
-		for _, t := range tasks {
-			createdAt := t.CreatedAt
-			if now.Year() == createdAt.Year() && now.Month() == createdAt.Month() && now.Day() == createdAt.Day() {
-				today = append(today, t)
-			}
+		RenderTable(tasks)
+	},
+}
+
+var timelapseCmd = &cobra.Command{
+	Use: "timelapse",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Generating timelapse.")
+		tasks, err := GetTodaysCompletedCapturedTasks()
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		RenderTable(today)
+		if len(tasks) == 0 {
+			fmt.Println("Exiting, found no tasks.")
+			return
+		}
+
+		log.Println("Todays completed captured tasks:")
+
+		var files []string
+		for _, task := range tasks {
+			files = append(files, task.ScreenURL.String)
+		}
+
+		log.Println(files)
+
+		outfile, err := FfmpegGenerateTimelapse(files)
+		if err != nil {
+			fmt.Println("Unable to generate timelapse")
+			log.Fatal(err)
+		}
+
+		fmt.Println("Generated timelapse: " + outfile)
 	},
 }

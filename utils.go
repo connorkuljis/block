@@ -27,3 +27,11 @@ func SendNotification() {
 		log.Println("Notification sent!")
 	}
 }
+
+func boolToInt(cond bool) int {
+	var v int
+	if cond {
+		v = 1
+	}
+	return v
+}

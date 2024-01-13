@@ -28,6 +28,7 @@ func init() {
 		historyCmd,
 		deleteTaskCmd,
 		resetDNSCmd,
+		timelapseCmd,
 	)
 
 	historyCmd.AddCommand(todayCmd)
