@@ -10,10 +10,9 @@ import (
 const DBName = "app_data.db"
 
 var (
-	flags       Flags
-	cfg         Config
-	currentTask Task
-	db          *sqlx.DB
+	flags Flags
+	cfg   Config
+	db    *sqlx.DB
 )
 
 type Flags struct {

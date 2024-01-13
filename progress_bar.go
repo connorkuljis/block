@@ -26,7 +26,7 @@ func RenderProgressBar(r Remote) {
 
 	ticksPerSeconds := 15
 	interval := 1000 / ticksPerSeconds
-	max := calculateTotalTicks(currentTask.PlannedDuration, interval)
+	max := calculateTotalTicks(r.Task.PlannedDuration, interval)
 
 	bar := progressBar(max)
 
@@ -34,14 +34,14 @@ func RenderProgressBar(r Remote) {
 	for {
 		select {
 		case <-r.Cancel:
-			saveBarState(bar)
+			saveBarState(r.Task, bar)
 			r.wg.Done()
 			return
 		case <-r.Pause:
 			<-r.Pause
 		default:
 			if i == max {
-				saveBarState(bar)
+				saveBarState(r.Task, bar)
 				SendNotification()
 				close(r.Finish)
 				r.wg.Done()
@@ -55,10 +55,9 @@ func RenderProgressBar(r Remote) {
 	}
 }
 
-func saveBarState(bar *progressbar.ProgressBar) {
+func saveBarState(task Task, bar *progressbar.ProgressBar) {
 	fmt.Println()
 
-	task := currentTask
 	percent := bar.State().CurrentPercent * 100
 
 	if err := UpdateCompletionPercent(task, percent); err != nil {

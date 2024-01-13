@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,25 +12,39 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 )
 
 // generates an path combining the current timestamp, taskname and filetype
-func generateScreenRecordingName() string {
-	var parts []string
-	parts = append(parts, time.Now().Format("2006-01-02_15-04-05"))
-	parts = append(parts, strings.ReplaceAll(currentTask.Name, " ", "_"))
-	parts = append(parts, ".mkv")
+func generateOutFilename(formatStr string, name string, filetype string) string {
+	const separator = "_"
 
-	filename := strings.Join(parts, "-")
+	timestamp := time.Now().Format(formatStr)
 
-	return filename
+	if name == "" {
+		return timestamp + filetype
+	}
+
+	// uppercase first letter in each word of task name joined by empty space
+	// eg: "software demo" -> 'SoftwareDemo'
+	label := ""
+	parts := strings.Split(name, " ")
+	for i := range parts {
+		runes := []rune(parts[i])
+		first := runes[0]
+		first = unicode.ToUpper(first)
+		label += string(runes)
+	}
+
+	return timestamp + separator + label + filetype
 }
 
 func FfmpegCaptureScreen(r Remote) {
-	filename := generateScreenRecordingName()
-	target := filepath.Join(cfg.FfmpegRecordingsPath, filename)
-
 	var cmd *exec.Cmd
+
+	filename := generateOutFilename("2006-01-02_15-04", r.Task.Name, ".mkv")
+	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
+
 	switch runtime.GOOS {
 	case "darwin":
 		inputs := cfg.AvfoundationDevice
@@ -39,7 +54,7 @@ func FfmpegCaptureScreen(r Remote) {
 			"-i", inputs,
 			"-pix_fmt", "yuv420p",
 			"-r", "25",
-			target,
+			filename,
 		)
 	case "linux":
 		log.Println("Warning. Screen capture is experiemental on linux")
@@ -50,7 +65,7 @@ func FfmpegCaptureScreen(r Remote) {
 			"-framerate", "25",
 			"-f", "x11grab",
 			"-i", ":0,0",
-			target,
+			filename,
 		)
 	case "windows":
 		log.Println("Warning. Screen capture is experiemental on windows")
@@ -58,7 +73,7 @@ func FfmpegCaptureScreen(r Remote) {
 			"ffmpeg",
 			"-f", "dshow",
 			"-i", "video=screen-capture-recorder",
-			target,
+			filename,
 		)
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
@@ -90,7 +105,7 @@ func FfmpegCaptureScreen(r Remote) {
 		log.Print(err) // 255 exit code is expected to be logged on success.
 	}
 
-	_, err = os.Stat(target)
+	_, err = os.Stat(filename)
 	if err != nil {
 		log.Print(err)
 		log.Print(stdout.String())
@@ -99,10 +114,9 @@ func FfmpegCaptureScreen(r Remote) {
 		return
 	}
 
-	log.Print("Successfully captured screen recording at:")
-	log.Print(target)
+	log.Print("Successfully captured screen recording at: " + filename)
 
-	if err = UpdateScreenURL(currentTask, filename); err != nil {
+	if err = UpdateScreenURL(r.Task, filename); err != nil {
 		log.Print(err)
 	}
 
@@ -118,33 +132,44 @@ func terminate(cmd *exec.Cmd) {
 
 func FfmpegGenerateTimelapse(files []string) (string, error) {
 	var args []string
-	outputFile := filepath.Join(cfg.FfmpegRecordingsPath, "output.mp4")
+	filename := ""
 
-	// -i 2024-01-11_15-55-52-focus.mkv \
-	// -i 2024-01-10_14-48-03-sesh.mkv \
+	if len(files) == 0 {
+		return filename, errors.New("Need at least one file to generate timelapse.")
+	}
+
+	filename = generateOutFilename("2006-01-02", "", ".mkv")
+	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
+
+	listFilename := generateOutFilename("2006-01-02", "list", ".txt")
+	listFilename = filepath.Join(cfg.FfmpegRecordingsPath, listFilename)
+
+	listFile, err := os.Create(listFilename)
+	if err != nil {
+		return filename, err
+	}
+	defer listFile.Close()
+
 	for _, file := range files {
-		args = append(args, "-i")
-		args = append(args, filepath.Join(cfg.FfmpegRecordingsPath, file))
+		input := filepath.Join(cfg.FfmpegRecordingsPath, file)
+		listFile.WriteString(fmt.Sprintf("file '%s'\n", input))
 	}
 
-	// -vf "setpts=PTS/15" -an out.mp4
-	args = append(args, "-vf")
-	args = append(args, "setpts=PTS/60")
-	args = append(args, "-an")
-	args = append(args, outputFile)
-
-	log.Println("Generating timelapse.")
-	for _, a := range args {
-		fmt.Println(a)
-	}
+	args = append(args, "-f", "concat", "-safe", "0", "-i", listFilename, "-c", "copy", "-y", filename)
 
 	cmd := exec.Command("ffmpeg", args...)
+	log.Println("Generating timelapse: " + cmd.String())
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return "", err
 	}
 
-	return outputFile, nil
+	err = os.Remove(listFilename)
+	if err != nil {
+		return "", err
+	}
+
+	return filename, nil
 }

@@ -12,6 +12,8 @@ import (
 )
 
 type Remote struct {
+	Task Task
+
 	wg     *sync.WaitGroup
 	Pause  chan bool
 	Cancel chan bool
@@ -45,7 +47,7 @@ var startCmd = &cobra.Command{
 			log.Fatal(fmt.Errorf("Error converting %s to float. Please provide a valid float.", durationStr))
 		}
 
-		currentTask = InsertTask(NewTask(name, duration))
+		currentTask := InsertTask(NewTask(name, duration))
 		createdAt := time.Now()
 
 		var b Blocker
