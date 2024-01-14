@@ -65,6 +65,7 @@ var startCmd = &cobra.Command{
 		color.Red("ESC or 'q' to exit. Press any key to pause.")
 
 		r := Remote{
+			Task:   currentTask,
 			wg:     &sync.WaitGroup{},
 			Pause:  make(chan bool, 1),
 			Cancel: make(chan bool, 1),
