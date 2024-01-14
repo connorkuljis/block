@@ -12,73 +12,68 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
 	"github.com/fatih/color"
 )
 
-// generates an path combining the current timestamp, taskname and filetype
-func generateOutFilename(inTime time.Time, formatStr string, name string, filetype string) string {
-	const separator = "_"
+const TimeFormat = "2006-01-02_15-04"
 
-	timestamp := inTime.Format(formatStr)
+func conventionalFilename(timestamp, name, filetype string) string {
+	separator := "_"
+	concatenator := "-"
+	return timestamp + separator + strings.ReplaceAll(name, " ", concatenator) + filetype
+}
 
-	if name == "" {
-		return timestamp + filetype
-	}
-
-	// uppercase first letter in each word of task name joined by empty space
-	// eg: "software demo" -> 'SoftwareDemo'
-	label := ""
-	parts := strings.Split(name, " ")
-	for i := range parts {
-		// cast current string part to runes
-		runes := []rune(parts[i])
-		// uppercase first rune
-		runes[0] = unicode.ToUpper(runes[0])
-		// append casted runes to string
-		label = label + string(runes)
-	}
-
-	return timestamp + separator + label + filetype
+type FfmpegCommandOpts struct {
+	Format     string
+	Input      string
+	FrameRate  string
+	Resolution string
 }
 
 func FfmpegCaptureScreen(r Remote) {
 	var cmd *exec.Cmd
+	var cmdArgs []string
+	opts := FfmpegCommandOpts{
+		FrameRate: "25",
+	}
 
-	filename := generateOutFilename(time.Now(), "2006-01-02_15-04", r.Task.Name, ".mkv")
-	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
+	filename := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
+		time.Now().Format(TimeFormat),
+		r.Task.Name,
+		".mkv",
+	))
 
 	switch runtime.GOOS {
 	case "darwin":
-		inputs := cfg.AvfoundationDevice
-		cmd = exec.Command(
-			"ffmpeg",
-			"-f", "avfoundation",
-			"-i", inputs,
-			"-pix_fmt", "yuv420p",
-			"-r", "25",
-			filename,
-		)
+		opts.Format = "avfoundation"
+		opts.Input = cfg.AvfoundationDevice
+
+		cmdArgs = append(cmdArgs, "-f", opts.Format)
+		cmdArgs = append(cmdArgs, "-i", opts.Input)
+		cmdArgs = append(cmdArgs, "-r", opts.FrameRate)
+
 	case "linux":
 		log.Println("Warning. Screen capture is experiemental on linux")
-		res := "1920x1080"
-		cmd = exec.Command(
-			"ffmpeg",
-			"-video_size", res,
-			"-framerate", "25",
-			"-f", "x11grab",
-			"-i", ":0,0",
-			filename,
-		)
+
+		opts.Format = "x11grab"
+		opts.Input = ":0,0"
+		opts.Resolution = "1920x1080"
+
+		cmdArgs = append(cmdArgs, "-f", opts.Format)
+		cmdArgs = append(cmdArgs, "-i", opts.Input)
+		cmdArgs = append(cmdArgs, "-framerate", opts.FrameRate)
+		cmdArgs = append(cmdArgs, "-video_size", opts.Resolution)
+
 	case "windows":
 		log.Println("Warning. Screen capture is experiemental on windows")
-		cmd = exec.Command(
-			"ffmpeg",
-			"-f", "dshow",
-			"-i", "video=screen-capture-recorder",
-			filename,
-		)
+
+		opts.Format = "dshow"
+		opts.Input = "video=screen-capture-recorder"
+
+		cmdArgs = append(cmdArgs, "-f", opts.Format)
+		cmdArgs = append(cmdArgs, "-i", opts.Input)
+
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
 		r.wg.Done()
@@ -87,6 +82,7 @@ func FfmpegCaptureScreen(r Remote) {
 
 	log.Println("Starting screen recorder.")
 
+	cmd = exec.Command("ffmpeg", cmdArgs...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -106,14 +102,15 @@ func FfmpegCaptureScreen(r Remote) {
 	}
 
 	if err = cmd.Wait(); err != nil {
-		log.Print(err) // 255 exit code is expected to be logged on success.
+		// 255 exit code is expected to be logged on success.
+		log.Print(err)
 	}
 
 	_, err = os.Stat(filename)
 	if err != nil {
-		log.Print(err)
 		log.Print(stdout.String())
 		log.Print(stderr.String())
+		log.Print(err)
 		r.wg.Done()
 		return
 	}
@@ -134,7 +131,7 @@ func terminate(cmd *exec.Cmd) {
 	}
 }
 
-func FfmpegConcatenateScreenCaptures(inTime time.Time, files []string) (string, error) {
+func FfmpegConcatenateScreenRecordings(inTime time.Time, files []string) (string, error) {
 	var args []string
 	filename := ""
 
@@ -142,40 +139,42 @@ func FfmpegConcatenateScreenCaptures(inTime time.Time, files []string) (string, 
 		return filename, errors.New("Need at least one file to generate timelapse.")
 	}
 
-	filename = generateOutFilename(inTime, "2006-01-02_15-04", "Today", ".mkv")
+	timestamp := inTime.Format(TimeFormat)
+	filename = conventionalFilename(timestamp, "concatenated", ".mkv")
 	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
 
-	listFilename := generateOutFilename(inTime, "2006-01-02", "list", ".txt")
-	listFilename = filepath.Join(cfg.FfmpegRecordingsPath, listFilename)
-
-	listFile, err := os.Create(listFilename)
+	temp, err := os.CreateTemp("", timestamp+"test")
 	if err != nil {
 		log.Println(err)
 		return filename, err
 	}
-	defer listFile.Close()
+	defer os.Remove(temp.Name())
 
 	for _, file := range files {
-		listFile.WriteString(fmt.Sprintf("file '%s'\n", file))
+		temp.WriteString(fmt.Sprintf("file '%s'\n", file))
 	}
 
-	args = append(args, "-f", "concat", "-safe", "0", "-i", listFilename, "-c", "copy", "-y", filename)
+	args = append(args,
+		"-f", "concat",
+		"-safe", "0",
+		"-i", temp.Name(),
+		"-c", "copy",
+		"-y",
+		filename,
+	)
 
 	cmd := exec.Command("ffmpeg", args...)
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
 	color.Green("Generating timelapse: " + cmd.String())
 	err = cmd.Run()
 	if err != nil {
 		log.Println(stderr.String())
 		log.Println(stdout.String())
-		return "", err
-	}
-
-	err = os.Remove(listFilename)
-	if err != nil {
-		return "", err
+		return filename, err
 	}
 
 	return filename, nil

@@ -48,7 +48,6 @@ var startCmd = &cobra.Command{
 			log.Fatal(fmt.Errorf("Invalid argument, error converting %s to float. Please provide a valid float.", durationStr))
 		}
 
-		currentTask := InsertTask(NewTask(name, duration))
 		createdAt := time.Now()
 
 		var b Blocker
@@ -64,6 +63,8 @@ var startCmd = &cobra.Command{
 		}
 
 		color.Red("ESC or 'q' to exit. Press any key to pause.")
+
+		currentTask := InsertTask(NewTask(name, duration))
 
 		r := Remote{
 			Task:   currentTask,
@@ -99,9 +100,6 @@ var startCmd = &cobra.Command{
 
 		if flags.Verbose {
 			RenderTable([]Task{currentTask})
-			// fmt.Printf("Start time:\t%s\n", createdAt.Format("3:04:05pm"))
-			// fmt.Printf("End time:\t%s\n", finishedAt.Format("3:04:05pm"))
-			// fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(actualDuration.Hours()), int(actualDuration.Minutes())%60, int(actualDuration.Seconds())%60)
 		}
 
 		fmt.Println("Goodbye.")
@@ -113,24 +111,25 @@ var historyCmd = &cobra.Command{
 	Short: "Show task history.",
 	Run: func(cmd *cobra.Command, args []string) {
 		var tasks []Task
-		var err error
 
 		if len(args) == 0 {
+			var err error
 			tasks, err = GetAllTasks()
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if len(args) == 1 {
-			inStr := args[0]
-			if strings.ToLower(inStr) == "today" {
+			arg1 := args[0]
+			if strings.ToLower(arg1) == "today" {
+				var err error
 				tasks, err = GetTasksByDate(time.Now())
 				if err != nil {
 					log.Fatal(err)
 				}
 			} else {
-				inDate, err := time.Parse("2006-01-02", inStr)
+				inDate, err := time.Parse("2006-01-02", arg1)
 				if err != nil {
-					log.Fatal("Error parsing date: " + inStr)
+					log.Fatal("Error parsing date: " + arg1)
 				}
 				tasks, err = GetTasksByDate(inDate)
 				if err != nil {
@@ -175,36 +174,38 @@ var generateCmd = &cobra.Command{
 			log.Fatal("Invalid arguments, expected either 'today' or [timestamp] in yyyy-mm-dd")
 		}
 
-		inStr := args[0]
-		var inDate time.Time
-		var err error
+		arg1 := args[0]
+		var t time.Time
 
-		if strings.ToLower(inStr) == "today" {
-			fmt.Println("Generating todays capture recording.")
-			inDate = time.Now()
+		if strings.ToLower(arg1) == "today" {
+			t = time.Now()
 		} else {
-			inDate, err = time.Parse("2006-01-02", inStr)
+			var err error
+			t, err = time.Parse("2006-01-02", arg1)
 			if err != nil {
-				log.Fatal("Error parsing date: " + inStr)
+				log.Fatal("Error parsing date: " + arg1)
 			}
 		}
 
-		tasks, err := GetCapturedTasksByDate(inDate)
+		tasks, err := GetCapturedTasksByDate(t)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		var screenCaptureFiles []string
 		for _, task := range tasks {
-			screenCaptureFiles = append(screenCaptureFiles, task.ScreenURL.String)
+			screenCaptureFile := task.ScreenURL.String
+			if screenCaptureFile != "" {
+				screenCaptureFiles = append(screenCaptureFiles, screenCaptureFile)
+			}
 		}
 
-		outfile, err := FfmpegConcatenateScreenCaptures(inDate, screenCaptureFiles)
+		outfile, err := FfmpegConcatenateScreenRecordings(t, screenCaptureFiles)
 		if err != nil {
-			fmt.Println("Unable to generate timelapse")
+			fmt.Println("Unable to concatenate recordings")
 			log.Fatal(err)
 		}
 
-		fmt.Println("Generated timelapse: " + outfile)
+		fmt.Println("Generated concatenated recording: " + outfile)
 	},
 }
