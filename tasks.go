@@ -193,36 +193,28 @@ func DeleteTaskByID(id string) error {
 	return nil
 }
 
-// func GetTasksByDate(inDate time.Time) ([]Task, error) {
-// 	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE(?)`
-
-// 	var tasks []Task
-
-// 	err := db.Select(&tasks, query)
-// }
-
-func GetTodaysTasks() ([]Task, error) {
-	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE('now')`
+func GetTasksByDate(inDate time.Time) ([]Task, error) {
+	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE(?)`
 
 	var tasks []Task
 
-	err := db.Select(&tasks, query)
+	err := db.Select(&tasks, query, inDate)
 	if err != nil {
-		return tasks, nil
+		return tasks, err
 	}
 
 	return tasks, nil
 }
 
-func GetTodaysCompletedCapturedTasks() ([]Task, error) {
+func GetCapturedTasksByDate(inDate time.Time) ([]Task, error) {
 	query := `SELECT * FROM Tasks 
-	WHERE DATE(created_at) = DATE('now')
-	AND completed = 1
-	AND screen_enabled = 1`
+	WHERE DATE(created_at) = DATE(?)
+	AND screen_enabled = 1
+	AND completed = 1`
 
 	var tasks []Task
 
-	err := db.Select(&tasks, query)
+	err := db.Select(&tasks, query, inDate)
 	if err != nil {
 		return tasks, nil
 	}

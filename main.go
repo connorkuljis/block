@@ -27,10 +27,8 @@ func init() {
 		historyCmd,
 		deleteTaskCmd,
 		resetDNSCmd,
-		timelapseCmd,
+		generateCmd,
 	)
-
-	historyCmd.AddCommand(todayCmd)
 
 	rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
 	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")

@@ -13,13 +13,15 @@ import (
 	"syscall"
 	"time"
 	"unicode"
+
+	"github.com/fatih/color"
 )
 
 // generates an path combining the current timestamp, taskname and filetype
-func generateOutFilename(formatStr string, name string, filetype string) string {
+func generateOutFilename(inTime time.Time, formatStr string, name string, filetype string) string {
 	const separator = "_"
 
-	timestamp := time.Now().Format(formatStr)
+	timestamp := inTime.Format(formatStr)
 
 	if name == "" {
 		return timestamp + filetype
@@ -30,10 +32,12 @@ func generateOutFilename(formatStr string, name string, filetype string) string 
 	label := ""
 	parts := strings.Split(name, " ")
 	for i := range parts {
+		// cast current string part to runes
 		runes := []rune(parts[i])
-		first := runes[0]
-		first = unicode.ToUpper(first)
-		label += string(runes)
+		// uppercase first rune
+		runes[0] = unicode.ToUpper(runes[0])
+		// append casted runes to string
+		label = label + string(runes)
 	}
 
 	return timestamp + separator + label + filetype
@@ -42,7 +46,7 @@ func generateOutFilename(formatStr string, name string, filetype string) string 
 func FfmpegCaptureScreen(r Remote) {
 	var cmd *exec.Cmd
 
-	filename := generateOutFilename("2006-01-02_15-04", r.Task.Name, ".mkv")
+	filename := generateOutFilename(time.Now(), "2006-01-02_15-04", r.Task.Name, ".mkv")
 	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
 
 	switch runtime.GOOS {
@@ -130,7 +134,7 @@ func terminate(cmd *exec.Cmd) {
 	}
 }
 
-func FfmpegGenerateTimelapse(files []string) (string, error) {
+func FfmpegConcatenateScreenCaptures(inTime time.Time, files []string) (string, error) {
 	var args []string
 	filename := ""
 
@@ -138,31 +142,34 @@ func FfmpegGenerateTimelapse(files []string) (string, error) {
 		return filename, errors.New("Need at least one file to generate timelapse.")
 	}
 
-	filename = generateOutFilename("2006-01-02", "", ".mkv")
+	filename = generateOutFilename(inTime, "2006-01-02_15-04", "Today", ".mkv")
 	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
 
-	listFilename := generateOutFilename("2006-01-02", "list", ".txt")
+	listFilename := generateOutFilename(inTime, "2006-01-02", "list", ".txt")
 	listFilename = filepath.Join(cfg.FfmpegRecordingsPath, listFilename)
 
 	listFile, err := os.Create(listFilename)
 	if err != nil {
+		log.Println(err)
 		return filename, err
 	}
 	defer listFile.Close()
 
 	for _, file := range files {
-		input := filepath.Join(cfg.FfmpegRecordingsPath, file)
-		listFile.WriteString(fmt.Sprintf("file '%s'\n", input))
+		listFile.WriteString(fmt.Sprintf("file '%s'\n", file))
 	}
 
 	args = append(args, "-f", "concat", "-safe", "0", "-i", listFilename, "-c", "copy", "-y", filename)
 
 	cmd := exec.Command("ffmpeg", args...)
-	log.Println("Generating timelapse: " + cmd.String())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	color.Green("Generating timelapse: " + cmd.String())
 	err = cmd.Run()
 	if err != nil {
+		log.Println(stderr.String())
+		log.Println(stdout.String())
 		return "", err
 	}
 

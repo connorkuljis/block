@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,7 +45,7 @@ var startCmd = &cobra.Command{
 
 		duration, err := strconv.ParseFloat(durationStr, 64)
 		if err != nil {
-			log.Fatal(fmt.Errorf("Error converting %s to float. Please provide a valid float.", durationStr))
+			log.Fatal(fmt.Errorf("Invalid argument, error converting %s to float. Please provide a valid float.", durationStr))
 		}
 
 		currentTask := InsertTask(NewTask(name, duration))
@@ -97,9 +98,10 @@ var startCmd = &cobra.Command{
 		}
 
 		if flags.Verbose {
-			fmt.Printf("Start time:\t%s\n", createdAt.Format("3:04:05pm"))
-			fmt.Printf("End time:\t%s\n", finishedAt.Format("3:04:05pm"))
-			fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(actualDuration.Hours()), int(actualDuration.Minutes())%60, int(actualDuration.Seconds())%60)
+			RenderTable([]Task{currentTask})
+			// fmt.Printf("Start time:\t%s\n", createdAt.Format("3:04:05pm"))
+			// fmt.Printf("End time:\t%s\n", finishedAt.Format("3:04:05pm"))
+			// fmt.Printf("Duration:\t%d hours, %d minutes and %d seconds.\n", int(actualDuration.Hours()), int(actualDuration.Minutes())%60, int(actualDuration.Seconds())%60)
 		}
 
 		fmt.Println("Goodbye.")
@@ -110,10 +112,33 @@ var historyCmd = &cobra.Command{
 	Use:   "history",
 	Short: "Show task history.",
 	Run: func(cmd *cobra.Command, args []string) {
-		tasks, err := GetAllTasks()
-		if err != nil {
-			log.Fatal(err)
+		var tasks []Task
+		var err error
+
+		if len(args) == 0 {
+			tasks, err = GetAllTasks()
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if len(args) == 1 {
+			inStr := args[0]
+			if strings.ToLower(inStr) == "today" {
+				tasks, err = GetTasksByDate(time.Now())
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				inDate, err := time.Parse("2006-01-02", inStr)
+				if err != nil {
+					log.Fatal("Error parsing date: " + inStr)
+				}
+				tasks, err = GetTasksByDate(inDate)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 		}
+
 		RenderTable(tasks)
 	},
 }
@@ -142,42 +167,39 @@ var resetDNSCmd = &cobra.Command{
 	},
 }
 
-var todayCmd = &cobra.Command{
-	Use: "today",
+var generateCmd = &cobra.Command{
+	Use:   "generate",
+	Short: "Concatenate capture recording files into a seperate file.",
 	Run: func(cmd *cobra.Command, args []string) {
-		tasks, err := GetTodaysCompletedCapturedTasks()
+		if len(args) != 1 {
+			log.Fatal("Invalid arguments, expected either 'today' or [timestamp] in yyyy-mm-dd")
+		}
+
+		inStr := args[0]
+		var inDate time.Time
+		var err error
+
+		if strings.ToLower(inStr) == "today" {
+			fmt.Println("Generating todays capture recording.")
+			inDate = time.Now()
+		} else {
+			inDate, err = time.Parse("2006-01-02", inStr)
+			if err != nil {
+				log.Fatal("Error parsing date: " + inStr)
+			}
+		}
+
+		tasks, err := GetCapturedTasksByDate(inDate)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		RenderTable(tasks)
-	},
-}
-
-var timelapseCmd = &cobra.Command{
-	Use: "timelapse",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Generating timelapse.")
-		tasks, err := GetTodaysCompletedCapturedTasks()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if len(tasks) == 0 {
-			fmt.Println("Exiting, found no tasks.")
-			return
-		}
-
-		log.Println("Todays completed captured tasks:")
-
-		var files []string
+		var screenCaptureFiles []string
 		for _, task := range tasks {
-			files = append(files, task.ScreenURL.String)
+			screenCaptureFiles = append(screenCaptureFiles, task.ScreenURL.String)
 		}
 
-		log.Println(files)
-
-		outfile, err := FfmpegGenerateTimelapse(files)
+		outfile, err := FfmpegConcatenateScreenCaptures(inDate, screenCaptureFiles)
 		if err != nil {
 			fmt.Println("Unable to generate timelapse")
 			log.Fatal(err)
