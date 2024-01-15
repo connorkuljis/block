@@ -25,54 +25,62 @@ func conventionalFilename(timestamp, name, filetype string) string {
 }
 
 type FfmpegCommandOpts struct {
-	Format     string
-	Input      string
-	FrameRate  string
+	InputFormat string
+	InputFile   string
+	OutputFile  string
+	FrameRate   string
+
+	// linux only
 	Resolution string
 }
 
 func FfmpegCaptureScreen(r Remote) {
 	var cmd *exec.Cmd
 	var cmdArgs []string
-	opts := FfmpegCommandOpts{
-		FrameRate: "25",
-	}
 
-	filename := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
+	recording := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
 		time.Now().Format(TimeFormat),
 		r.Task.Name,
 		".mkv",
 	))
 
+	opts := FfmpegCommandOpts{
+		FrameRate:  "25",
+		OutputFile: recording,
+	}
+
 	switch runtime.GOOS {
 	case "darwin":
-		opts.Format = "avfoundation"
-		opts.Input = cfg.AvfoundationDevice
+		opts.InputFormat = "avfoundation"
+		opts.InputFile = cfg.AvfoundationDevice
 
-		cmdArgs = append(cmdArgs, "-f", opts.Format)
-		cmdArgs = append(cmdArgs, "-i", opts.Input)
+		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
+		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
 		cmdArgs = append(cmdArgs, "-r", opts.FrameRate)
+		cmdArgs = append(cmdArgs, opts.OutputFile)
 
 	case "linux":
 		log.Println("Warning. Screen capture is experiemental on linux")
 
-		opts.Format = "x11grab"
-		opts.Input = ":0,0"
+		opts.InputFormat = "x11grab"
+		opts.InputFile = ":0,0"
 		opts.Resolution = "1920x1080"
 
-		cmdArgs = append(cmdArgs, "-f", opts.Format)
-		cmdArgs = append(cmdArgs, "-i", opts.Input)
+		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
+		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
 		cmdArgs = append(cmdArgs, "-framerate", opts.FrameRate)
 		cmdArgs = append(cmdArgs, "-video_size", opts.Resolution)
+		cmdArgs = append(cmdArgs, opts.OutputFile)
 
 	case "windows":
 		log.Println("Warning. Screen capture is experiemental on windows")
 
-		opts.Format = "dshow"
-		opts.Input = "video=screen-capture-recorder"
+		opts.InputFormat = "dshow"
+		opts.InputFile = "video=screen-capture-recorder"
 
-		cmdArgs = append(cmdArgs, "-f", opts.Format)
-		cmdArgs = append(cmdArgs, "-i", opts.Input)
+		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
+		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
+		cmdArgs = append(cmdArgs, opts.OutputFile)
 
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
@@ -81,7 +89,6 @@ func FfmpegCaptureScreen(r Remote) {
 	}
 
 	log.Println("Starting screen recorder.")
-
 	cmd = exec.Command("ffmpeg", cmdArgs...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -106,7 +113,7 @@ func FfmpegCaptureScreen(r Remote) {
 		log.Print(err)
 	}
 
-	_, err = os.Stat(filename)
+	_, err = os.Stat(recording)
 	if err != nil {
 		log.Print(stdout.String())
 		log.Print(stderr.String())
@@ -115,9 +122,9 @@ func FfmpegCaptureScreen(r Remote) {
 		return
 	}
 
-	log.Print("Successfully captured screen recording at: " + filename)
+	log.Print("Successfully captured screen recording at: " + recording)
 
-	if err = UpdateScreenURL(r.Task, filename); err != nil {
+	if err = UpdateScreenURL(r.Task, recording); err != nil {
 		log.Print(err)
 	}
 
@@ -133,17 +140,24 @@ func terminate(cmd *exec.Cmd) {
 
 func FfmpegConcatenateScreenRecordings(inTime time.Time, files []string) (string, error) {
 	var args []string
-	filename := ""
 
 	if len(files) == 0 {
-		return filename, errors.New("Need at least one file to generate timelapse.")
+		return "", errors.New("Need at least one file to generate timelapse.")
 	}
 
-	timestamp := inTime.Format(TimeFormat)
-	filename = conventionalFilename(timestamp, "concatenated", ".mkv")
-	filename = filepath.Join(cfg.FfmpegRecordingsPath, filename)
+	filename := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
+		inTime.Format(TimeFormat),
+		"concatenated",
+		".mkv",
+	))
 
-	temp, err := os.CreateTemp("", timestamp+"test")
+	// $ cat mylist.txt <-- we use a temporary file
+	// file '/path/to/file1'
+	// file '/path/to/file2'
+	// file '/path/to/file3'
+
+	// $ ffmpeg -f concat -safe 0 -i mylist.txt -c copy output.mp4
+	temp, err := os.CreateTemp("", "listfile")
 	if err != nil {
 		log.Println(err)
 		return filename, err
