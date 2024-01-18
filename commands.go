@@ -34,7 +34,8 @@ Automatically unblock sites when the task is complete.`,
 }
 
 var startCmd = &cobra.Command{
-	Use: "start",
+	Use:   "start",
+	Short: "Expects a duration in minutes, followed by a task name. Eg: block start [duration] [task name]",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
 			log.Fatal(fmt.Errorf("Invalid number of arguments, expected 2, recieved: %d", len(args)))
@@ -150,7 +151,9 @@ var deleteTaskCmd = &cobra.Command{
 		err := DeleteTaskByID(id)
 		if err != nil {
 			log.Fatal(err)
+			return
 		}
+		fmt.Println("Deleted: ", id)
 	},
 }
 
