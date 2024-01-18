@@ -58,7 +58,7 @@ Features:
   - 📒 Answer 'what did I get done today' by running `block history`.
 - 󰑊 Capture your progress by enabling the screen recorder with `-x` or `--screen-recorder`.
   - 🎥 Compile recordings into a time-lapse.
-- Cross-platform integration for `mac`, `linux` and `windows`.
+- Cross-platform integration for `mac` and `linux` (`windows` soon).
   - If you are having issues -> [https://github.com/connorkuljis/block-cli/issues](https://github.com/connorkuljis/block-cli/issues)
 - `YAML` file at `~/.config/block-cli/config.yaml`
 
