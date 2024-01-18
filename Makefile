@@ -7,7 +7,7 @@ run:
 clean:
 	rm ./block
 
-release:
+install:
 	sudo cp ./block /usr/local/bin/
 
 dev:
