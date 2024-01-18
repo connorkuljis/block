@@ -17,16 +17,12 @@ Spend less time on the computer and more time in the sun.
 - requires `ffmpeg` 
 
 ## Download
+
 `git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
 
-## Build
 `make`
 
-## Run
-`make run`
-
-### Move binary to your path (optional)
-`make release`
+`make install`
 
 ## Block Sites (Guide)
 
