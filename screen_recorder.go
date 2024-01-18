@@ -72,15 +72,15 @@ func FfmpegCaptureScreen(r Remote) {
 		cmdArgs = append(cmdArgs, "-video_size", opts.Resolution)
 		cmdArgs = append(cmdArgs, opts.OutputFile)
 
-	case "windows":
-		log.Println("Warning. Screen capture is experiemental on windows")
+	// case "windows":
+	// 	log.Println("Warning. Screen capture is experiemental on windows")
 
-		opts.InputFormat = "dshow"
-		opts.InputFile = "video=screen-capture-recorder"
+	// 	opts.InputFormat = "dshow"
+	// 	opts.InputFile = "video=screen-capture-recorder"
 
-		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
-		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
-		cmdArgs = append(cmdArgs, opts.OutputFile)
+	// 	cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
+	// 	cmdArgs = append(cmdArgs, "-i", opts.InputFile)
+	// 	cmdArgs = append(cmdArgs, opts.OutputFile)
 
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
