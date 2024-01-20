@@ -11,7 +11,7 @@ import (
 func progressBar(max int) *progressbar.ProgressBar {
 	return progressbar.NewOptions(max,
 		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionSetPredictTime(false),
+		progressbar.OptionSetPredictTime(true),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowElapsedTimeOnFinish(),
 		progressbar.OptionFullWidth(),
@@ -20,15 +20,9 @@ func progressBar(max int) *progressbar.ProgressBar {
 }
 
 func RenderProgressBar(r Remote) {
-	calculateTotalTicks := func(minutes float64, tickIntervalMs int) int {
-		return int((minutes * 60 * 1000) / float64(tickIntervalMs))
-	}
-
-	ticksPerSeconds := 15
-	interval := 1000 / ticksPerSeconds
-	max := calculateTotalTicks(r.Task.PlannedDuration, interval)
-
-	bar := progressBar(max)
+	length := int(r.Task.PlannedDuration * 60)
+	bar := progressBar(length)
+	ticker := time.NewTicker(time.Second * 1)
 
 	i := 0
 	for {
@@ -39,8 +33,8 @@ func RenderProgressBar(r Remote) {
 			return
 		case <-r.Pause:
 			<-r.Pause
-		default:
-			if i == max {
+		case <-ticker.C:
+			if i == length {
 				saveBarState(r.Task, bar)
 				SendNotification()
 				close(r.Finish)
@@ -50,16 +44,13 @@ func RenderProgressBar(r Remote) {
 
 			bar.Add(1)
 			i++
-			time.Sleep(time.Millisecond * time.Duration(interval))
 		}
 	}
 }
 
 func saveBarState(task Task, bar *progressbar.ProgressBar) {
 	fmt.Println()
-
 	percent := bar.State().CurrentPercent * 100
-
 	if err := UpdateCompletionPercent(task, percent); err != nil {
 		log.Print(err)
 	}
