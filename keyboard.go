@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -33,7 +34,7 @@ func PollInput(r Remote) {
 				panic(event.Err)
 			}
 
-			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc || event.Rune == 'q' {
+			if event.Key == keyboard.KeyCtrlC {
 				if paused {
 					spinner.Stop()
 					close(r.Pause)
@@ -44,8 +45,16 @@ func PollInput(r Remote) {
 			} else {
 				if paused {
 					spinner.Stop()
+					err := r.Blocker.BlockAndReset()
+					if err != nil {
+						log.Print(err)
+					}
 				} else {
 					spinner.Start()
+					err := r.Blocker.UnblockAndReset()
+					if err != nil {
+						log.Print(err)
+					}
 				}
 				paused = !paused
 				r.Pause <- true

@@ -20,7 +20,7 @@ func progressBar(max int) *progressbar.ProgressBar {
 }
 
 func RenderProgressBar(r Remote) {
-	length := int(r.Task.PlannedDuration * 60)
+	length := int(r.Task.PlannedDuration * 60) // convert minutes to seconds.
 	bar := progressBar(length)
 	ticker := time.NewTicker(time.Second * 1)
 

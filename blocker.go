@@ -17,36 +17,54 @@ const (
 
 type Blocker struct {
 	HostsFile string
+	Disable   bool
 }
 
-func NewBlocker() Blocker {
-	return Blocker{HostsFile: HostsFile}
-}
-
-func (b *Blocker) Unblock() error {
-	parseLineUnblock := func(line string) string {
-		if string(line[0]) == "#" {
-			return line
-		}
-		return "# " + line
+func NewBlocker(disable bool) Blocker {
+	return Blocker{
+		HostsFile: HostsFile,
+		Disable:   disable,
 	}
-	err := b.UpdateBlockList(parseLineUnblock)
-	if err != nil {
-		return err
+}
+
+func (b *Blocker) UnblockAndReset() error {
+	if !b.Disable {
+		parseLineUnblock := func(line string) string {
+			if string(line[0]) == "#" {
+				return line
+			}
+			return "# " + line
+		}
+		err := b.UpdateBlockList(parseLineUnblock)
+		if err != nil {
+			return err
+		}
+
+		err = ResetDNS()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (b *Blocker) Block() error {
-	parseLineBlock := func(line string) string {
-		if string(line[0]) == "#" {
-			return strings.TrimSpace(line[1:])
+func (b *Blocker) BlockAndReset() error {
+	if !b.Disable {
+		parseLineBlock := func(line string) string {
+			if string(line[0]) == "#" {
+				return strings.TrimSpace(line[1:])
+			}
+			return line
 		}
-		return line
-	}
-	err := b.UpdateBlockList(parseLineBlock)
-	if err != nil {
-		return err
+		err := b.UpdateBlockList(parseLineBlock)
+		if err != nil {
+			return err
+		}
+
+		err = ResetDNS()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

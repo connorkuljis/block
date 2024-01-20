@@ -13,7 +13,8 @@ import (
 )
 
 type Remote struct {
-	Task Task
+	Task    Task
+	Blocker Blocker
 
 	wg     *sync.WaitGroup
 	Pause  chan bool
@@ -51,28 +52,25 @@ var startCmd = &cobra.Command{
 
 		createdAt := time.Now()
 
-		var b Blocker
-		useBlocker := !flags.DisableBlocker
-		if useBlocker {
-			b = NewBlocker()
-			if err := b.Block(); err != nil {
-				log.Fatal(err)
-			}
-			if err = ResetDNS(); err != nil {
-				log.Fatal(err)
-			}
+		blocker := NewBlocker(flags.DisableBlocker)
+		err = blocker.BlockAndReset()
+		if err != nil {
+			log.Print(err)
 		}
 
-		color.Red("ESC or 'q' to exit. Press any key to pause.")
+		color.Red("To exit press Control-C. Any key to pause.")
 
 		currentTask := InsertTask(NewTask(name, duration))
 
+		fmt.Printf("Starting a timer for %0.1f minutes\n", currentTask.PlannedDuration)
+
 		r := Remote{
-			Task:   currentTask,
-			wg:     &sync.WaitGroup{},
-			Pause:  make(chan bool, 1),
-			Cancel: make(chan bool, 1),
-			Finish: make(chan bool, 1),
+			Task:    currentTask,
+			Blocker: blocker,
+			wg:      &sync.WaitGroup{},
+			Pause:   make(chan bool, 1),
+			Cancel:  make(chan bool, 1),
+			Finish:  make(chan bool, 1),
 		}
 
 		r.wg.Add(2)
@@ -86,10 +84,9 @@ var startCmd = &cobra.Command{
 
 		r.wg.Wait()
 
-		if useBlocker {
-			if err = b.Unblock(); err != nil {
-				log.Fatal(err)
-			}
+		err = blocker.UnblockAndReset()
+		if err != nil {
+			log.Print(err)
 		}
 
 		finishedAt := time.Now()
