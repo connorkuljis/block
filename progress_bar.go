@@ -25,6 +25,7 @@ func RenderProgressBar(r Remote) {
 	ticker := time.NewTicker(time.Second * 1)
 
 	i := 0
+	paused := false
 	for {
 		select {
 		case <-r.Cancel:
@@ -32,7 +33,7 @@ func RenderProgressBar(r Remote) {
 			r.wg.Done()
 			return
 		case <-r.Pause:
-			<-r.Pause
+			paused = !paused
 		case <-ticker.C:
 			if i == length {
 				saveBarState(r.Task, bar)
@@ -42,8 +43,10 @@ func RenderProgressBar(r Remote) {
 				return
 			}
 
-			bar.Add(1)
-			i++
+			if !paused {
+				bar.Add(1)
+				i++
+			}
 		}
 	}
 }
