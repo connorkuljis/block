@@ -22,8 +22,6 @@ func InitConfig() error {
 		YamlFile  = "config.yaml"
 	)
 
-	var cfg Config
-
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -32,7 +30,7 @@ func InitConfig() error {
 	path := filepath.Join(homeDir, ConfigDir)
 	yaml := filepath.Join(path, YamlFile)
 
-	cfg = Config{
+	cfg := Config{
 		Path:                 path,
 		Yaml:                 yaml,
 		FfmpegRecordingsPath: ".",
@@ -46,6 +44,9 @@ func InitConfig() error {
 	if err := createOrLoadYamlFileIfNotExists(cfg); err != nil {
 		return err
 	}
+
+	// package global
+	Cfg = cfg
 
 	return nil
 }
