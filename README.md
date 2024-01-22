@@ -2,7 +2,7 @@
 
 **block** eliminates distractions and saves you time from the command line. 
 
-![demo](demo.gif)
+![demo](.github/demo.gif)
 
 # Mission
 
