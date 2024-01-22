@@ -56,8 +56,7 @@ Output demo.gif
 Set Width 1024
 Set Height 768
 
-Set Margin 40
-Set MarginFill "#6B50FF"
+# Set MarginFill "#6B50FF"
 Set BorderRadius 8
 
 Set Framerate 24
