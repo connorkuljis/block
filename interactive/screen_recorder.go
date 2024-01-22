@@ -1,4 +1,4 @@
-package ffmpeg
+package interactive
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/connorkuljis/task-tracker-cli/config"
-	"github.com/connorkuljis/task-tracker-cli/interactive"
 	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/fatih/color"
 )
@@ -37,7 +36,7 @@ type FfmpegCommandOpts struct {
 	Resolution string
 }
 
-func FfmpegCaptureScreen(r interactive.Remote) {
+func FfmpegCaptureScreen(r Remote) {
 	var cmd *exec.Cmd
 	var cmdArgs []string
 

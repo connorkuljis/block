@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/ffmpeg"
+	"github.com/connorkuljis/task-tracker-cli/interactive"
 	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +45,7 @@ var generateCmd = &cobra.Command{
 			}
 		}
 
-		outfile, err := ffmpeg.FfmpegConcatenateScreenRecordings(t, screenCaptureFiles)
+		outfile, err := interactive.FfmpegConcatenateScreenRecordings(t, screenCaptureFiles)
 		if err != nil {
 			fmt.Println("Unable to concatenate recordings")
 			log.Fatal(err)

@@ -1,15 +1,14 @@
-package interactive
+package tasks
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 )
 
-func RenderTable(tasks []tasks.Task) {
+func RenderTable(tasks []Task) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"ID", "Date", "Name", "Planned (min)", "Actual (min)", "Completion Percent", "Completed"})
 	table.SetAutoWrapText(false)

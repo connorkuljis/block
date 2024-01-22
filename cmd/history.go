@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/interactive"
 	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +21,7 @@ var historyCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-			interactive.RenderTable(all)
+			tasks.RenderTable(all)
 			return
 		}
 
@@ -33,7 +32,7 @@ var historyCmd = &cobra.Command{
 				if err != nil {
 					log.Fatal(err)
 				}
-				interactive.RenderTable(all)
+				tasks.RenderTable(all)
 				return
 			default:
 				inDate, err := time.Parse("2006-01-02", args[0])
@@ -45,7 +44,7 @@ var historyCmd = &cobra.Command{
 				if err != nil {
 					log.Fatal(err)
 				}
-				interactive.RenderTable(all)
+				tasks.RenderTable(all)
 				return
 			}
 		}

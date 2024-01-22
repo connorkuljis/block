@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/connorkuljis/task-tracker-cli/blocker"
-	"github.com/connorkuljis/task-tracker-cli/ffmpeg"
 	"github.com/connorkuljis/task-tracker-cli/interactive"
 	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/fatih/color"
@@ -79,7 +78,7 @@ var startCmd = &cobra.Command{
 
 		if screenRecorder {
 			r.Wg.Add(1)
-			go ffmpeg.FfmpegCaptureScreen(r)
+			go interactive.FfmpegCaptureScreen(r)
 		}
 
 		// wait for the goroutines to finish
