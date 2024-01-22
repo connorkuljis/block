@@ -1,4 +1,4 @@
-package main
+package ffmpeg
 
 import (
 	"bytes"
@@ -13,6 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/connorkuljis/task-tracker-cli/config"
+	"github.com/connorkuljis/task-tracker-cli/interactive"
+	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/fatih/color"
 )
 
@@ -34,11 +37,11 @@ type FfmpegCommandOpts struct {
 	Resolution string
 }
 
-func FfmpegCaptureScreen(r Remote) {
+func FfmpegCaptureScreen(r interactive.Remote) {
 	var cmd *exec.Cmd
 	var cmdArgs []string
 
-	recording := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
+	recording := filepath.Join(config.Cfg.FfmpegRecordingsPath, conventionalFilename(
 		time.Now().Format(TimeFormat),
 		r.Task.Name,
 		".mkv",
@@ -52,7 +55,7 @@ func FfmpegCaptureScreen(r Remote) {
 	switch runtime.GOOS {
 	case "darwin":
 		opts.InputFormat = "avfoundation"
-		opts.InputFile = cfg.AvfoundationDevice
+		opts.InputFile = config.Cfg.AvfoundationDevice
 
 		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
 		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
@@ -84,7 +87,7 @@ func FfmpegCaptureScreen(r Remote) {
 
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
-		r.wg.Done()
+		r.Wg.Done()
 		return
 	}
 
@@ -97,7 +100,7 @@ func FfmpegCaptureScreen(r Remote) {
 	err := cmd.Start()
 	if err != nil {
 		log.Print(err)
-		r.wg.Done()
+		r.Wg.Done()
 		return
 	}
 
@@ -118,17 +121,17 @@ func FfmpegCaptureScreen(r Remote) {
 		log.Print(stdout.String())
 		log.Print(stderr.String())
 		log.Print(err)
-		r.wg.Done()
+		r.Wg.Done()
 		return
 	}
 
 	log.Print("Successfully captured screen recording at: " + recording)
 
-	if err = UpdateScreenURL(r.Task, recording); err != nil {
+	if err = tasks.UpdateScreenURL(r.Task, recording); err != nil {
 		log.Print(err)
 	}
 
-	r.wg.Done()
+	r.Wg.Done()
 }
 
 func terminate(cmd *exec.Cmd) {
@@ -145,7 +148,7 @@ func FfmpegConcatenateScreenRecordings(inTime time.Time, files []string) (string
 		return "", errors.New("Need at least one file to generate timelapse.")
 	}
 
-	filename := filepath.Join(cfg.FfmpegRecordingsPath, conventionalFilename(
+	filename := filepath.Join(config.Cfg.FfmpegRecordingsPath, conventionalFilename(
 		inTime.Format(TimeFormat),
 		"concatenated",
 		".mkv",
