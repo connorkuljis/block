@@ -4,6 +4,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/connorkuljis/task-tracker-cli/cmd"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,20 +22,6 @@ type Flags struct {
 	Verbose        bool
 }
 
-func init() {
-	rootCmd.AddCommand(
-		startCmd,
-		historyCmd,
-		deleteTaskCmd,
-		resetDNSCmd,
-		generateCmd,
-	)
-
-	rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
-	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
-	rootCmd.PersistentFlags().BoolVarP(&flags.Verbose, "verbose", "v", false, "Logs additional details.")
-}
-
 func main() {
 	var err error
 
@@ -47,7 +34,7 @@ func main() {
 	}
 	defer db.Close()
 
-	if err = rootCmd.Execute(); err != nil {
+	if err = cmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
 }
