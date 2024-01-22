@@ -1,4 +1,4 @@
-package main
+package interactive
 
 import (
 	"log"
@@ -27,7 +27,7 @@ func PollInput(r Remote) {
 	for {
 		select {
 		case <-r.Finish:
-			r.wg.Done()
+			r.Wg.Done()
 			return
 		case event := <-keysEvents:
 			if event.Err != nil {
@@ -40,7 +40,7 @@ func PollInput(r Remote) {
 					close(r.Pause)
 				}
 				close(r.Cancel)
-				r.wg.Done()
+				r.Wg.Done()
 				return
 			} else {
 				if paused {

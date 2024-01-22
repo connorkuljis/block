@@ -1,11 +1,15 @@
-package main
+package tasks
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
+	"github.com/connorkuljis/task-tracker-cli/config"
+	"github.com/connorkuljis/task-tracker-cli/utils"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,7 +27,7 @@ type Task struct {
 	CompletionPercent sql.NullFloat64 `db:"completion_percent"`
 }
 
-var schema = `CREATE TABLE IF NOT EXISTS Tasks(
+var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     planned_duration_minutes REAL NOT NULL,
@@ -37,13 +41,32 @@ var schema = `CREATE TABLE IF NOT EXISTS Tasks(
     completion_percent REAL
 )`
 
-func NewTask(inName string, inDuration float64) Task {
+var db *sqlx.DB
+
+const DBName = "app_data.db"
+
+func InitDB() error {
+	var err error
+
+	db, err = sqlx.Connect("sqlite3", filepath.Join(config.Cfg.Path, DBName))
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(Schema)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewTask(inName string, inDuration float64, blockerEnabled bool, screenEnabled bool) Task {
 	return Task{
 		Name:              inName,
 		PlannedDuration:   inDuration,
 		ActualDuration:    sql.NullFloat64{Valid: false},
-		BlockerEnabled:    boolToInt(!flags.DisableBlocker),
-		ScreenEnabled:     boolToInt(flags.ScreenRecorder),
+		BlockerEnabled:    utils.BoolToInt(blockerEnabled),
+		ScreenEnabled:     utils.BoolToInt(screenEnabled),
 		ScreenURL:         sql.NullString{Valid: false},
 		CreatedAt:         time.Now(),
 		FinishedAt:        sql.NullTime{Valid: false},

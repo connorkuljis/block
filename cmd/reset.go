@@ -3,6 +3,7 @@ package cmd
 import (
 	"log"
 
+	"github.com/connorkuljis/task-tracker-cli/blocker"
 	"github.com/spf13/cobra"
 )
 
@@ -10,8 +11,7 @@ var resetDNSCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Reset DNS cache.",
 	Run: func(cmd *cobra.Command, args []string) {
-		flags.Verbose = true
-		err := ResetDNS()
+		err := blocker.ResetDNS()
 		if err != nil {
 			log.Println(err)
 		}

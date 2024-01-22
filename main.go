@@ -2,18 +2,14 @@ package main
 
 import (
 	"log"
-	"path/filepath"
 
 	"github.com/connorkuljis/task-tracker-cli/cmd"
-	"github.com/jmoiron/sqlx"
+	"github.com/connorkuljis/task-tracker-cli/config"
+	"github.com/connorkuljis/task-tracker-cli/tasks"
 )
-
-const DBName = "app_data.db"
 
 var (
 	flags Flags
-	cfg   Config
-	db    *sqlx.DB
 )
 
 type Flags struct {
@@ -23,34 +19,17 @@ type Flags struct {
 }
 
 func main() {
-	var err error
-
-	if err := initConfig(); err != nil {
+	err := config.InitConfig()
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err = initDB(); err != nil {
+	err = tasks.InitDB()
+	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
 	if err = cmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func initDB() error {
-	var err error
-
-	db, err = sqlx.Connect("sqlite3", filepath.Join(cfg.Path, DBName))
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(schema)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

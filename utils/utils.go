@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"log"
@@ -7,10 +7,6 @@ import (
 )
 
 func SendNotification() {
-	if flags.Verbose {
-		log.Println("Sending notification...")
-	}
-
 	var icon = ""
 
 	err := beeep.Beep(beeep.DefaultFreq, beeep.DefaultDuration)
@@ -22,13 +18,9 @@ func SendNotification() {
 	if err != nil {
 		log.Printf("Error, could not send notification alert: %v", err)
 	}
-
-	if flags.Verbose {
-		log.Println("Notification sent!")
-	}
 }
 
-func boolToInt(cond bool) int {
+func BoolToInt(cond bool) int {
 	var v int
 	if cond {
 		v = 1

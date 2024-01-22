@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -14,11 +14,15 @@ type Config struct {
 	AvfoundationDevice   string `yaml:"avfoundationDevice"`
 }
 
-func initConfig() error {
+var Cfg Config
+
+func InitConfig() error {
 	const (
 		ConfigDir = ".config/block-cli"
 		YamlFile  = "config.yaml"
 	)
+
+	var cfg Config
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -35,18 +39,18 @@ func initConfig() error {
 		AvfoundationDevice:   "1:0",
 	}
 
-	if err := makeDirectoryIfNotExists(); err != nil {
+	if err := makeDirectoryIfNotExists(cfg); err != nil {
 		return err
 	}
 
-	if err := createOrLoadYamlFileIfNotExists(); err != nil {
+	if err := createOrLoadYamlFileIfNotExists(cfg); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func makeDirectoryIfNotExists() error {
+func makeDirectoryIfNotExists(cfg Config) error {
 	_, err := os.Stat(cfg.Path)
 	if os.IsNotExist(err) {
 		if err := os.MkdirAll(cfg.Path, os.ModePerm); err != nil {
@@ -56,22 +60,22 @@ func makeDirectoryIfNotExists() error {
 	return nil
 }
 
-func createOrLoadYamlFileIfNotExists() error {
+func createOrLoadYamlFileIfNotExists(cfg Config) error {
 	_, err := os.Stat(cfg.Yaml)
 	if os.IsNotExist(err) {
-		if err = writeDefaultConfigurationYaml(); err != nil {
+		if err = writeDefaultConfigurationYaml(cfg); err != nil {
 			return err
 		}
 		return nil
 	} else {
-		loadConfig()
-		sanitiseConfigValues()
+		loadConfig(cfg)
+		sanitiseConfigValues(cfg)
 	}
 	return nil
 }
 
 // create config file and write default values
-func writeDefaultConfigurationYaml() error {
+func writeDefaultConfigurationYaml(cfg Config) error {
 	configFile, err := os.Create(cfg.Yaml)
 	if err != nil {
 		return err
@@ -88,7 +92,7 @@ func writeDefaultConfigurationYaml() error {
 	return nil
 }
 
-func loadConfig() error {
+func loadConfig(cfg Config) error {
 	contents, err := os.ReadFile(cfg.Yaml)
 	if err != nil {
 		return err
@@ -99,7 +103,7 @@ func loadConfig() error {
 	return nil
 }
 
-func sanitiseConfigValues() error {
+func sanitiseConfigValues(cfg Config) error {
 	if _, err := os.Stat(cfg.FfmpegRecordingsPath); err != nil {
 		return err
 	}

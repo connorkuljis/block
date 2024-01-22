@@ -1,12 +1,8 @@
-package main
+package blocker
 
 import (
 	"bufio"
-	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 )
 
@@ -29,13 +25,13 @@ func NewBlocker(disable bool) Blocker {
 
 func (b *Blocker) UnblockAndReset() error {
 	if !b.Disable {
-		parseLineUnblock := func(line string) string {
+		unblockFn := func(line string) string {
 			if string(line[0]) == "#" {
 				return line
 			}
 			return "# " + line
 		}
-		err := b.UpdateBlockList(parseLineUnblock)
+		err := b.UpdateBlockList(unblockFn)
 		if err != nil {
 			return err
 		}
@@ -50,13 +46,13 @@ func (b *Blocker) UnblockAndReset() error {
 
 func (b *Blocker) BlockAndReset() error {
 	if !b.Disable {
-		parseLineBlock := func(line string) string {
+		blockFn := func(line string) string {
 			if string(line[0]) == "#" {
 				return strings.TrimSpace(line[1:])
 			}
 			return line
 		}
-		err := b.UpdateBlockList(parseLineBlock)
+		err := b.UpdateBlockList(blockFn)
 		if err != nil {
 			return err
 		}
@@ -97,10 +93,6 @@ func (b *Blocker) UpdateBlockList(parseLine func(string) string) error {
 		return err
 	}
 
-	if flags.Verbose {
-		log.Println(string(data))
-	}
-
 	err = truncateFile(data, b.HostsFile)
 	if err != nil {
 		return err
@@ -120,34 +112,5 @@ func truncateFile(content []byte, destinationPath string) error {
 	if err != nil {
 		return err
 	}
-
-	if flags.Verbose {
-		fmt.Println("File content overwritten successfully!")
-	}
-
-	return nil
-}
-
-func ResetDNS() error {
-	if runtime.GOOS == "darwin" {
-		if flags.Verbose {
-			fmt.Println("Flushing dscacheutil.")
-		}
-		cmd := exec.Command("sudo", "dscacheutil", "-flushcache")
-		err := cmd.Run()
-		if err != nil {
-			return err
-		}
-
-		if flags.Verbose {
-			fmt.Println("Terminating mDNSResponder. ")
-		}
-		cmd = exec.Command("sudo", "killall", "-HUP", "mDNSResponder")
-		err = cmd.Run()
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }

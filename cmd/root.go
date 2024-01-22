@@ -25,9 +25,10 @@ func init() {
 		generateCmd,
 	)
 
-	rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
-	rootCmd.PersistentFlags().BoolVarP(&flags.ScreenRecorder, "screen-recorder", "x", false, "Enable screen recorder.")
-	rootCmd.PersistentFlags().BoolVarP(&flags.Verbose, "verbose", "v", false, "Logs additional details.")
+	// rootCmd.PersistentFlags().BoolVarP(&flags.DisableBlocker, "no-block", "d", false, "Do not block hosts file.")
+	rootCmd.PersistentFlags().BoolP("noBlock", "d", false, "Do not block hosts file.")
+	rootCmd.PersistentFlags().BoolP("screenRecorder", "x", false, "Enable screen recorder.")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Logs additional details.")
 
 }
 
