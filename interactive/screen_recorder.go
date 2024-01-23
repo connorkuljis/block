@@ -40,7 +40,7 @@ func FfmpegCaptureScreen(r Remote) {
 	var cmd *exec.Cmd
 	var cmdArgs []string
 
-	recording := filepath.Join(config.Cfg.FfmpegRecordingsPath, conventionalFilename(
+	recording := filepath.Join(config.GetFfmpegRecordingPath(), conventionalFilename(
 		time.Now().Format(TimeFormat),
 		r.Task.Name,
 		".mkv",
@@ -54,7 +54,7 @@ func FfmpegCaptureScreen(r Remote) {
 	switch runtime.GOOS {
 	case "darwin":
 		opts.InputFormat = "avfoundation"
-		opts.InputFile = config.Cfg.AvfoundationDevice
+		opts.InputFile = config.GetAvfoundationDevice()
 
 		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
 		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
@@ -147,7 +147,7 @@ func FfmpegConcatenateScreenRecordings(inTime time.Time, files []string) (string
 		return "", errors.New("Need at least one file to generate timelapse.")
 	}
 
-	filename := filepath.Join(config.Cfg.FfmpegRecordingsPath, conventionalFilename(
+	filename := filepath.Join(config.GetFfmpegRecordingPath(), conventionalFilename(
 		inTime.Format(TimeFormat),
 		"concatenated",
 		".mkv",

@@ -1,111 +1,112 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
-type Config struct {
-	Path                 string
-	Yaml                 string
-	FfmpegRecordingsPath string `yaml:"ffmpegRecordingsPath"`
-	AvfoundationDevice   string `yaml:"avfoundationDevice"`
+type AppConfig struct {
+	HiddenConfig HiddenConfig
+	RootConfig   RootConfig
 }
 
-var Cfg Config
+var Cfg AppConfig
 
 func InitConfig() error {
-	const (
-		ConfigDir = ".config/block-cli"
-		YamlFile  = "config.yaml"
-	)
-
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
-	path := filepath.Join(homeDir, ConfigDir)
-	yaml := filepath.Join(path, YamlFile)
+	hiddenConfig := NewHiddenConfig(homeDir)
+	rootConfig := NewRootConfig(homeDir)
 
-	cfg := Config{
-		Path:                 path,
-		Yaml:                 yaml,
-		FfmpegRecordingsPath: ".",
-		AvfoundationDevice:   "1:0",
-	}
-
-	if err := makeDirectoryIfNotExists(cfg); err != nil {
+	slog.Debug("Checking: " + hiddenConfig.Path)
+	if err := makeDirIfNotExists(hiddenConfig.Path); err != nil {
 		return err
 	}
 
-	if err := createOrLoadYamlFileIfNotExists(cfg); err != nil {
+	slog.Debug("Checking: " + rootConfig.Path)
+	if err := makeDirIfNotExists(rootConfig.Path); err != nil {
 		return err
 	}
 
-	// package global
-	Cfg = cfg
+	slog.Debug("Checking: " + hiddenConfig.ConfigFilename)
+	if err := loadOrMakeConfigFileIfNotExists(hiddenConfig); err != nil {
+		return err
+	}
+
+	Cfg = AppConfig{
+		HiddenConfig: hiddenConfig,
+		RootConfig:   rootConfig,
+	}
 
 	return nil
 }
 
-func makeDirectoryIfNotExists(cfg Config) error {
-	_, err := os.Stat(cfg.Path)
+func makeDirIfNotExists(path string) error {
+	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		if err := os.MkdirAll(cfg.Path, os.ModePerm); err != nil {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func createOrLoadYamlFileIfNotExists(cfg Config) error {
-	_, err := os.Stat(cfg.Yaml)
+func loadOrMakeConfigFileIfNotExists(h HiddenConfig) error {
+	_, err := os.Stat(filepath.Join(h.Path, h.ConfigFilename))
 	if os.IsNotExist(err) {
-		if err = writeDefaultConfigurationYaml(cfg); err != nil {
+		if err = makeDefaultConfigFile(h); err != nil {
 			return err
 		}
 		return nil
 	} else {
-		loadConfig(cfg)
-		sanitiseConfigValues(cfg)
+		loadConfig(h)
+		sanitiseConfigValues(h)
 	}
+
 	return nil
 }
 
 // create config file and write default values
-func writeDefaultConfigurationYaml(cfg Config) error {
-	configFile, err := os.Create(cfg.Yaml)
+func makeDefaultConfigFile(h HiddenConfig) error {
+	configFile, err := os.Create(filepath.Join(h.Path, h.ConfigFilename))
 	if err != nil {
 		return err
 	}
 	defer configFile.Close()
-	data, err := yaml.Marshal(&cfg)
+
+	data, err := yaml.Marshal(&h.Config)
 	if err != nil {
 		return err
 	}
+
 	_, err = configFile.Write(data)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func loadConfig(cfg Config) error {
-	contents, err := os.ReadFile(cfg.Yaml)
+func loadConfig(h HiddenConfig) error {
+	contents, err := os.ReadFile(h.Path)
 	if err != nil {
 		return err
 	}
-	if err = yaml.Unmarshal(contents, &cfg); err != nil {
+	if err = yaml.Unmarshal(contents, &h.Config); err != nil {
 		return err
 	}
 	return nil
 }
 
-func sanitiseConfigValues(cfg Config) error {
-	if _, err := os.Stat(cfg.FfmpegRecordingsPath); err != nil {
+func sanitiseConfigValues(h HiddenConfig) error {
+	if _, err := os.Stat(h.Config.FfmpegRecordingsPath); err != nil {
 		return err
 	}
 	return nil

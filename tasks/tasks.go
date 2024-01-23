@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"path/filepath"
 	"time"
 
 	"github.com/connorkuljis/task-tracker-cli/config"
@@ -43,12 +42,10 @@ var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
 
 var db *sqlx.DB
 
-const DBName = "app_data.db"
-
 func InitDB() error {
 	var err error
 
-	db, err = sqlx.Connect("sqlite3", filepath.Join(config.Cfg.Path, DBName))
+	db, err = sqlx.Connect("sqlite3", config.GetDBPath())
 	if err != nil {
 		return err
 	}
