@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -20,7 +22,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		disableBlocker := false
 		screenRecorder := false
-		verbose := false
+		debug := false
 		duration := 0.0
 		name := ""
 
@@ -43,18 +45,20 @@ var startCmd = &cobra.Command{
 
 		disableBlocker, _ = cmd.Root().Flags().GetBool("noBlock")
 		screenRecorder, _ = cmd.Root().Flags().GetBool("screenRecorder")
-		verbose, _ = cmd.Root().Flags().GetBool("verbose")
+		debug, _ = cmd.Root().Flags().GetBool("debug")
 
-		if verbose {
-			log.Println("Disable blocker: ", disableBlocker)
-			log.Println("Screen recorder: ", screenRecorder)
+		if debug {
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				Level: slog.LevelDebug,
+			})))
 		}
 
-		// start blocker
+		slog.Debug("starting blocker and resetting dns")
 		blocker := blocker.NewBlocker(disableBlocker)
 		if err = blocker.BlockAndReset(); err != nil {
-			log.Print(err)
+			slog.Error(err.Error())
 		}
+		slog.Debug("successfully enabled blocker and reset dns")
 
 		// print to standard out
 		color.Red("To exit press Control-C. Any key to pause.")
@@ -73,21 +77,26 @@ var startCmd = &cobra.Command{
 
 		// run the configured goroutines
 		r.Wg.Add(2)
+		slog.Debug("Rendering progress bar")
 		go interactive.RenderProgressBar(r)
+		slog.Debug("Polling input")
 		go interactive.PollInput(r)
 
 		if screenRecorder {
 			r.Wg.Add(1)
+			slog.Debug("Starting screen recorder")
 			go interactive.FfmpegCaptureScreen(r)
 		}
 
 		// wait for the goroutines to finish
 		r.Wg.Wait()
+		slog.Debug("Finished waiting on goroutines")
 
-		// stop blocker
+		slog.Debug("stopping blocker and reset dns")
 		if err = blocker.UnblockAndReset(); err != nil {
 			log.Print(err)
 		}
+		slog.Debug("successfully stopped blocker and reset dns")
 
 		// calculation
 		finishedAt := time.Now()

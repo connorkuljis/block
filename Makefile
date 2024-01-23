@@ -11,4 +11,6 @@ install:
 	sudo cp ./block /usr/local/bin/
 
 dev:
-	reflex -g '*.go' -d fancy make
+	go build -o block
+	reflex -r '\.go$\' make
+
