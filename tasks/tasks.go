@@ -121,7 +121,7 @@ func GetTaskByID(id int64) Task {
 func GetAllTasks() ([]Task, error) {
 	var tasks []Task
 
-	err := db.Select(&tasks, "SELECT * FROM Tasks")
+	err := db.Select(&tasks, "SELECT * FROM Tasks ORDER BY created_at ASC")
 	if err != nil {
 		return tasks, nil
 	}
@@ -132,7 +132,7 @@ func GetAllTasks() ([]Task, error) {
 func GetAllCompletedTasks() ([]Task, error) {
 	var tasks []Task
 
-	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1")
+	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1 AND actual_duration_minutes > 5 ORDER BY created_at ASC")
 	if err != nil {
 		return tasks, nil
 	}

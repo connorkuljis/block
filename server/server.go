@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"text/template"
-	"time"
 
 	"github.com/connorkuljis/task-tracker-cli/tasks"
 	"github.com/go-chi/chi/v5"
@@ -88,11 +87,8 @@ func (s *Server) routes() {
 
 func (s *Server) handleIndex() http.HandlerFunc {
 	type PageData struct {
-		Tasks [][]tasks.Task
-
-		Date         time.Time
-		TotalMinutes float64
-		NumTasks     int
+		Collection Collection
+		Docket     Docket
 	}
 
 	var indexHTML = []HTMLFile{
@@ -108,11 +104,16 @@ func (s *Server) handleIndex() http.HandlerFunc {
 		"mul": func(a, b int) int {
 			return a * b
 		},
+		"seq": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		date := time.Now()
-
 		t, err := tasks.GetAllCompletedTasks()
 		if err != nil {
 			log.Print(err)
@@ -120,15 +121,16 @@ func (s *Server) handleIndex() http.HandlerFunc {
 
 		grouped := groupByDate(t)
 
-		total := 0.0
-		for i := range t {
-			total += t[i].ActualDuration.Float64
+		totalMinutes := 0.0
+		for _, day := range grouped {
+			totalMinutes += day.TotalMinutes
 		}
 
+		docket := minuteToDocket(totalMinutes)
+
 		data := PageData{
-			Date:         date,
-			Tasks:        grouped,
-			TotalMinutes: total,
+			Collection: grouped,
+			Docket:     docket,
 		}
 
 		tmpl := compileTemplates("index.html", s, indexHTML, funcMap)
@@ -137,41 +139,62 @@ func (s *Server) handleIndex() http.HandlerFunc {
 	}
 }
 
+type Collection []Day
+
 type Day struct {
 	Tasks []tasks.Task
 
 	DateStr      string
-	TotalMinutes int
+	TotalMinutes float64
+	Docket       Docket
 }
 
-type Collection []Day
+type Docket struct {
+	Hours   int
+	Minutes int
+}
 
 // input:    ["01-01", "01-02", "02-01", "02-02",]
 // output:   [["01-01", "01-02"], ["02-01", "02-02"]]
-func groupByDate(items []tasks.Task) [][]tasks.Task {
-	var groupedData [][]tasks.Task
-	var currArr []tasks.Task
+func groupByDate(items []tasks.Task) Collection {
+	var collection Collection
+	var currDay Day
 	var prev tasks.Task
 	for i, item := range items {
 		if i == 0 {
-			currArr = append(currArr, item)
+			currDay.Tasks = append(currDay.Tasks, item)
+			currDay.DateStr = item.CreatedAt.Format("Mon Jan 02 2006")
+			currDay.TotalMinutes += item.ActualDuration.Float64
 			prev = item
 			continue
 		}
 
 		if item.CreatedAt.Day() == prev.CreatedAt.Day() {
-			currArr = append(currArr, item)
+			currDay.Tasks = append(currDay.Tasks, item)
+			currDay.TotalMinutes += item.ActualDuration.Float64
 			continue
 		}
 
-		groupedData = append(groupedData, currArr)
-		currArr = []tasks.Task{}
-		currArr = append(currArr, item)
+		currDay.Docket = minuteToDocket(currDay.TotalMinutes)
+		collection = append(collection, currDay)
+
+		currDay = Day{}
+		currDay.Tasks = append(currDay.Tasks, item)
+		currDay.DateStr = item.CreatedAt.Format("Mon Jan 02 2006")
+		currDay.TotalMinutes += item.ActualDuration.Float64
 		prev = item
 	}
 
 	// add the last array when none remaining
-	groupedData = append(groupedData, currArr)
+	currDay.Docket = minuteToDocket(currDay.TotalMinutes)
+	collection = append(collection, currDay)
 
-	return groupedData
+	return collection
+}
+
+func minuteToDocket(minutes float64) Docket {
+	hours := int(minutes / 60)
+	remainingMinutes := int(minutes) % 60
+
+	return Docket{Hours: hours, Minutes: remainingMinutes}
 }
