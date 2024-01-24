@@ -48,9 +48,7 @@ var startCmd = &cobra.Command{
 		debug, _ = cmd.Root().Flags().GetBool("debug")
 
 		if debug {
-			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-				Level: slog.LevelDebug,
-			})))
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
 		}
 
 		slog.Debug("starting blocker and resetting dns")
@@ -92,12 +90,6 @@ var startCmd = &cobra.Command{
 		r.Wg.Wait()
 		slog.Debug("Finished waiting on goroutines")
 
-		slog.Debug("stopping blocker and reset dns")
-		if err = blocker.UnblockAndReset(); err != nil {
-			log.Print(err)
-		}
-		slog.Debug("successfully stopped blocker and reset dns")
-
 		// calculation
 		finishedAt := time.Now()
 		actualDuration := finishedAt.Sub(createdAt)
@@ -106,6 +98,12 @@ var startCmd = &cobra.Command{
 		if err = tasks.UpdateFinishTimeAndDuration(currentTask, finishedAt, actualDuration); err != nil {
 			log.Fatal(err)
 		}
+
+		slog.Debug("stopping blocker and reset dns")
+		if err = blocker.UnblockAndReset(); err != nil {
+			log.Print(err)
+		}
+		slog.Debug("successfully stopped blocker and reset dns")
 
 		fmt.Println("Goodbye.")
 	},

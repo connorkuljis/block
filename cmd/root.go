@@ -23,6 +23,7 @@ func init() {
 		deleteTaskCmd,
 		resetDNSCmd,
 		generateCmd,
+		serveCmd,
 	)
 
 	rootCmd.PersistentFlags().BoolP("noBlock", "f", false, "Do not block hosts file.")

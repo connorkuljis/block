@@ -129,6 +129,17 @@ func GetAllTasks() ([]Task, error) {
 	return tasks, nil
 }
 
+func GetAllCompletedTasks() ([]Task, error) {
+	var tasks []Task
+
+	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1")
+	if err != nil {
+		return tasks, nil
+	}
+
+	return tasks, nil
+}
+
 func UpdateFinishTimeAndDuration(task Task, inFinishedAt time.Time, inActuralDuration time.Duration) error {
 	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ? WHERE id = ?"
 

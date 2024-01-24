@@ -1,0 +1,39 @@
+{{ define "section" }}
+<div>
+
+	<section class="util-section">
+
+		<div class="util-container cta">
+
+			<div class="cta-item">
+				Minimal Footprint
+			</div>
+
+			<div class="cta-item">
+				Designed for Small Teams
+			</div>
+
+			<div class="cta-item">
+				Server Side State Management and Rendering
+			</div>
+
+		</div>
+
+	</section>
+
+	<style>
+		this .cta {
+			display: flex;
+			width: 100%;
+			justify-content: space-around;
+		}
+
+		this .cta-item {
+			flex: 1;
+			gap: 4rem;
+			text-align: center;
+		}
+	</style>
+
+</div>
+{{ end }}

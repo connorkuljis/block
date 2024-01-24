@@ -1,0 +1,48 @@
+{{ define "layout" }}
+
+<div>
+	<h2>"Block-cli Timeline"</h2>
+
+	<div class="layout-grid-container">
+		{{ range .Tasks}}
+		<div>{{ (index . 0).CreatedAt.Format "2006-01-02"}}</div>
+		<div class="gantt-grid-container">
+			{{ range .}}
+			<div class="gantt-item"
+				style="grid-column: {{ add (mul .CreatedAt.Hour 60) .CreatedAt.Minute }} / {{ add (add (mul .FinishedAt.Time.Hour 60) .FinishedAt.Time.Minute) 1 }}">
+				&NonBreakingSpace;
+			</div>
+			{{ end }}
+		</div>
+		{{ end }}
+	</div>
+
+	<br>
+
+	<div>Total <b>{{ printf "%.2f" .TotalMinutes }}</b> minutes</div>
+
+	<style>
+		this .layout-grid-container {
+			display: grid;
+			grid-template-columns: auto 1fr;
+			column-gap: 1rem;
+		}
+
+		this .gantt-grid-container {
+			display: grid;
+			grid-template-columns: repeat(1440, 1fr);
+			/* minutes in a day = 1440 */
+
+			background: #ddd;
+			border-bottom: 1px solid black;
+		}
+
+		this .gantt-item {
+			background: red;
+			font-size: 0.75rem;
+			text-align: center;
+		}
+	</style>
+
+</div>
+{{ end }}
