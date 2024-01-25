@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/interactive"
-	"github.com/connorkuljis/task-tracker-cli/tasks"
+	"github.com/connorkuljis/block-cli/interactive"
+	"github.com/connorkuljis/block-cli/tasks"
 	"github.com/spf13/cobra"
 )
 

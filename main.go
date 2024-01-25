@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"github.com/connorkuljis/task-tracker-cli/cmd"
-	"github.com/connorkuljis/task-tracker-cli/config"
-	"github.com/connorkuljis/task-tracker-cli/tasks"
+	"github.com/connorkuljis/block-cli/cmd"
+	"github.com/connorkuljis/block-cli/config"
+	"github.com/connorkuljis/block-cli/tasks"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package cmd
 import (
 	"log"
 
-	"github.com/connorkuljis/task-tracker-cli/blocker"
+	"github.com/connorkuljis/block-cli/blocker"
 	"github.com/spf13/cobra"
 )
 

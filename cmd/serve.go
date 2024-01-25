@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/connorkuljis/task-tracker-cli/server"
+	"github.com/connorkuljis/block-cli/server"
 	"github.com/spf13/cobra"
 )
 

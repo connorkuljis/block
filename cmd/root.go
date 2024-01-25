@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/blocker"
-	"github.com/connorkuljis/task-tracker-cli/interactive"
-	"github.com/connorkuljis/task-tracker-cli/tasks"
+	"github.com/connorkuljis/block-cli/blocker"
+	"github.com/connorkuljis/block-cli/interactive"
+	"github.com/connorkuljis/block-cli/tasks"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )

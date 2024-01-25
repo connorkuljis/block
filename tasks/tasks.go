@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/task-tracker-cli/config"
-	"github.com/connorkuljis/task-tracker-cli/utils"
+	"github.com/connorkuljis/block-cli/config"
+	"github.com/connorkuljis/block-cli/utils"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type Task struct {

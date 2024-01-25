@@ -3,8 +3,8 @@ package interactive
 import (
 	"sync"
 
-	"github.com/connorkuljis/task-tracker-cli/blocker"
-	"github.com/connorkuljis/task-tracker-cli/tasks"
+	"github.com/connorkuljis/block-cli/blocker"
+	"github.com/connorkuljis/block-cli/tasks"
 )
 
 type Remote struct {
