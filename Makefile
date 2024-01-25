@@ -13,6 +13,5 @@ install:
 all: build run
 
 dev:
-	go build -o block
-	reflex -s ./block serve
+	reflex make 
 

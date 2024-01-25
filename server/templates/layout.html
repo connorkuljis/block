@@ -7,19 +7,20 @@
 		<div class="label">Timeline</div>
 		{{ range .Collection}}
 		<div class="date">{{ .DateStr }}</div>
-		<div class="docket">{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</div>
+		<div class="docket">
+			{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins
+		</div>
 		<div class="gantt-grid-container">
 			{{ range .Tasks }}
 			<div class="gantt-item">
 				{{ printf "%.0f" .ActualDuration.Float64 }}
 				<style>
-				this {
-					text-align: center;
-					position: relative;
-					grid-row: 1 / 2;
-					grid-column: {{ add (mul .CreatedAt.Hour 60) .CreatedAt.Minute }} / {{ add (add (mul .FinishedAt.Time.Hour 60) .FinishedAt.Time.Minute) 1 }};
-
-				}
+					this {
+						text-align: center;
+						position: relative;
+						grid-row: 1 / 2;
+						grid-column: {{ add (add (mul .CreatedAt.Hour 60) .CreatedAt.Minute) 1 }} / {{ add (add (mul .FinishedAt.Time.Hour 60) .FinishedAt.Time.Minute) 1 }};
+					}
 				</style>
 			</div>
 			{{ end }}
@@ -29,12 +30,13 @@
 		<div>&NonBreakingSpace;</div>
 		<div>&NonBreakingSpace;</div>
 		<div class="gantt-grid-container">
-			<div style="grid-column: 1 / span 59; text-align: center;">
-				0</div>
+			<div style="grid-column: 1 / span 59; text-align: center">0</div>
 			{{range $index, $value := seq 1 23}}
 			<div
-				style="grid-column: {{ add 1 (mul $value 60) }} / span 59; text-align: center; border-left: 1px solid var(--anduril-metal);">
-				{{ $value }}</div>
+				style="grid-column: {{ add 1 (mul $value 60) }} / span 59; text-align: center; border-left: 1px solid var(--anduril-metal);"
+			>
+				{{ $value }}
+			</div>
 			{{end}}
 		</div>
 
@@ -48,15 +50,14 @@
 			min-height: 100dvh;
 			padding: 2rem;
 
-			--anduril-titan: #4E5354;
-			--anduril-metal: #6F7473;
-			--anduril-white: #E2E5E0;
-			--anduril-blue: #007D9C;
+			--anduril-titan: #4e5354;
+			--anduril-metal: #6f7473;
+			--anduril-white: #e2e5e0;
+			--anduril-blue: #007d9c;
 
-			--linear-dark-blue: #12132D;
-			--linear-navy: #010314; 
-			background: radial-gradient(circle at bottom right, var(--linear-dark-blue) 0, var(--linear-navy), var(--linear-dark-blue) 100%);
-			color: var(--anduril-white);
+			--linear-dark-blue: #12132d;
+			--linear-navy: #010314;
+			/* background: radial-gradient(circle at bottom right, var(--linear-dark-blue) 0, var(--linear-navy), var(--linear-dark-blue) 100%); */
 		}
 
 		this .label {
@@ -67,12 +68,13 @@
 
 		this .date,
 		this .docket {
-			font-family: 'Courier New', Courier, monospace;
+			font-family: "Courier New", Courier, monospace;
 			display: flex;
 			align-items: center;
 		}
 
 		this .docket {
+			width: 100%;
 			text-align: right;
 		}
 
@@ -80,27 +82,29 @@
 			display: grid;
 			grid-template-columns: auto auto 1fr;
 			column-gap: 1rem;
+
 			border-radius: 1rem;
 			padding: 1rem;
+			border: 1px solid rgba(117, 92, 3, 0.18);
+			background: linear-gradient(
+				180deg,
+				rgba(178, 155, 90, 0.1),
+				rgba(178, 155, 90, 0) 56.56%
+			);
 		}
 
 		this .gantt-grid-container {
 			display: grid;
 			grid-template-columns: repeat(1440, 1fr);
 			background: #191919;
-			margin: 2rem;
-			box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
-			border-radius: 2px;
-			/* minutes in a day = 1440 */
 		}
 
 		this .gantt-item {
-			--lime: #D1FEA4;
-			--sky: #A2F9FC;
+			--lime: #d1fea4;
+			--sky: #a2f9fc;
 
 			--gradient: linear-gradient(to right, var(--sky), var(--lime));
 
-		
 			background: var(--gradient);
 			text-align: center;
 			color: black;
@@ -112,14 +116,6 @@
 				text-indent: 0;
 			}
 		}
-
-		this .bar-label {
-			position: absolute;
-			right: 0;
-			top: 0;
-
-		}
 	</style>
-
 </div>
 {{ end }}

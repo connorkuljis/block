@@ -23,7 +23,7 @@ func NewBlocker(disable bool) Blocker {
 	}
 }
 
-func (b *Blocker) UnblockAndReset() error {
+func (b *Blocker) Unblock() error {
 	if !b.Disable {
 		unblockFn := func(line string) string {
 			if string(line[0]) == "#" {
@@ -32,11 +32,6 @@ func (b *Blocker) UnblockAndReset() error {
 			return "# " + line
 		}
 		err := b.UpdateBlockList(unblockFn)
-		if err != nil {
-			return err
-		}
-
-		err = ResetDNS()
 		if err != nil {
 			return err
 		}

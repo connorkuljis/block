@@ -1,0 +1,9 @@
+{
+  "tabWidth": 4,
+  "useTabs": true,
+  "printWidth": 80,
+  "proseWrap": "always",
+  "semi": false,
+  "htmlWhitespaceSensitivity": "css",
+  "endOfLine": "auto"
+}

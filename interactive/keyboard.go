@@ -44,17 +44,17 @@ func PollInput(r Remote) {
 				return
 			} else {
 				if paused {
-					spinner.Stop()
 					err := r.Blocker.BlockAndReset()
 					if err != nil {
 						log.Print(err)
 					}
+					spinner.Stop()
 				} else {
-					spinner.Start()
-					err := r.Blocker.UnblockAndReset()
+					err := r.Blocker.Unblock()
 					if err != nil {
 						log.Print(err)
 					}
+					spinner.Start()
 				}
 				paused = !paused
 				r.Pause <- true
