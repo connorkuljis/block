@@ -3,3 +3,5 @@ block
 main
 
 .DS_Store
+
+/dist
