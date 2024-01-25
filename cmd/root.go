@@ -19,6 +19,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "block",
 	Short: "Expects a duration in minutes, followed by a task name. Eg: block start [duration] [task name]",
+	Args:  cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		disableBlocker := false
 		screenRecorder := false
