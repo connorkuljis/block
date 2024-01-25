@@ -4,4 +4,4 @@ main
 
 .DS_Store
 
-/dist
+dist/
