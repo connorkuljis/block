@@ -45,7 +45,7 @@ var db *sqlx.DB
 func InitDB() error {
 	var err error
 
-	db, err = sqlx.Connect("sqlite3", config.GetDBPath())
+	db, err = sqlx.Connect("sqlite", config.GetDBPath())
 	if err != nil {
 		return err
 	}
