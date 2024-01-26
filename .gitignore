@@ -1,5 +1,6 @@
 # binary files
 block
+block-cli
 main
 
 .DS_Store
