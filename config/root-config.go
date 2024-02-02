@@ -11,7 +11,7 @@ type RootConfig struct {
 
 const (
 	RootConfigDirName = ".block-cli"
-	DbName            = "app_data.db"
+	DbName            = "app_data.db?_time_format=sqlite"
 )
 
 func NewRootConfig(homeDir string) RootConfig {
