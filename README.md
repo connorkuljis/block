@@ -10,13 +10,14 @@ Spend less time on the computer and more time in the sun.
 
 # Install
 
+## Download latest binary release
 > To install the program, please read the instructions below:
 
+
+## Build from source
 ** important! **
 - requires `go`, *you can install go here: [go.dev](https://go.dev/)*
 - requires `ffmpeg` 
-
-## Download
 
 `git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
 
@@ -71,32 +72,10 @@ ESC or 'q' to exit. Press any key to pause.
 ```
 
 # Usage
-```
-Block saves you time by blocking websites at IP level.
-Progress bar is displayed directly in the terminal.
-Automatically unblock sites when the task is complete.
+- To see the list of commands available, run `block --help`
 
-Usage:
-  block [flags]
-  block [command]
 
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  delete      Deletes a task by given ID.
-  help        Help about any command
-  history     Show task history.
-  reset       Reset DNS cache.
-  start
-
-Flags:
-  -h, --help              help for block
-  -d, --no-block          Do not block hosts file.
-  -x, --screen-recorder   Enable screen recorder.
-  -v, --verbose           Logs additional details.
-
-Use "block [command] --help" for more information about a command.
-```
-
+# Faq
 # Troubleshooting Screen Recording with Ffmpeg
 If you have `ffmpeg` on you machine you can automatically capture your screen. 
 
