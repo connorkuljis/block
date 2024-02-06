@@ -13,6 +13,10 @@ Spend less time on the computer and more time in the sun.
 ## Download latest binary release
 > To install the program, please read the instructions below:
 
+- [downloaded latest binary release tarball](https://github.com/connorkuljis/block/releases)
+- extract the binary from the tarball
+- add the binary to your system $PATH
+
 
 ## Build from source
 ** important! **
