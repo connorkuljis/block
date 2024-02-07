@@ -1,6 +1,6 @@
 module github.com/connorkuljis/block-cli
 
-go 1.21.1
+go 1.22.0
 
 require (
 	github.com/briandowns/spinner v1.23.0

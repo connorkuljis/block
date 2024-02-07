@@ -162,8 +162,8 @@ func groupByDate(items []tasks.Task) Collection {
 	var prev tasks.Task
 	for i, item := range items {
 		if i == 0 {
-			currDay.Tasks = append(currDay.Tasks, item)
 			currDay.DateStr = item.CreatedAt.Format("Mon Jan 02 2006")
+			currDay.Tasks = append(currDay.Tasks, item)
 			currDay.TotalMinutes += item.ActualDuration.Float64
 			prev = item
 			continue

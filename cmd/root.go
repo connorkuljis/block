@@ -76,8 +76,10 @@ var rootCmd = &cobra.Command{
 
 		// run the configured goroutines
 		r.Wg.Add(2)
+
 		slog.Debug("Rendering progress bar")
 		go interactive.RenderProgressBar(r)
+
 		slog.Debug("Polling input")
 		go interactive.PollInput(r)
 
