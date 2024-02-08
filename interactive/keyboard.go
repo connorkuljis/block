@@ -34,7 +34,7 @@ func PollInput(r Remote) {
 				panic(event.Err)
 			}
 
-			if event.Key == keyboard.KeyCtrlC {
+			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc {
 				if paused {
 					spinner.Stop()
 					close(r.Pause)
@@ -42,22 +42,27 @@ func PollInput(r Remote) {
 				close(r.Cancel)
 				r.Wg.Done()
 				return
-			} else {
+			} else { // any other key press
+
+				paused = !paused
+
 				if paused {
+					r.Pause <- true
+
+					spinner.Start()
+					err := r.Blocker.Unblock()
+					if err != nil {
+						log.Print(err)
+					}
+				} else {
 					spinner.Stop()
 					err := r.Blocker.BlockAndReset()
 					if err != nil {
 						log.Print(err)
 					}
-				} else {
-					err := r.Blocker.Unblock()
-					if err != nil {
-						log.Print(err)
-					}
-					spinner.Start()
+
+					r.Pause <- true
 				}
-				paused = !paused
-				r.Pause <- true
 			}
 		}
 	}
