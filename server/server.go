@@ -2,6 +2,7 @@ package server
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -37,6 +38,9 @@ const (
 	LayoutHTML HTMLFile = "layout.html"
 	HeroHTML   HTMLFile = "components/hero.html"
 	FooterHTML HTMLFile = "components/footer.html"
+
+	HistoryHTML   HTMLFile = "history.html"
+	CognitiveHTML HTMLFile = "cognitive.html"
 )
 
 func Serve() {
@@ -82,19 +86,40 @@ func compileTemplates(templateName string, s *Server, files []HTMLFile, funcMap 
 
 func (s *Server) routes() {
 	s.Router.Handle("/static/*", http.FileServer(http.FS(s.FileSystem)))
-	s.Router.HandleFunc("/", s.handleIndex())
+	s.Router.HandleFunc("/history", s.handleHistory())
+	s.Router.HandleFunc("/cognitive", s.handleCognitive())
+
+	routes := s.Router.Routes()
+	for _, route := range routes {
+		fmt.Printf("http://localhost:%s%s\n", s.Port, route.Pattern)
+	}
 }
 
-func (s *Server) handleIndex() http.HandlerFunc {
+func (s *Server) handleCognitive() http.HandlerFunc {
+	var page = []HTMLFile{
+		RootHTML,
+		HeadHTML,
+		LayoutHTML,
+		CognitiveHTML,
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		tmpl := compileTemplates("cognitive", s, page, nil)
+		tmpl.ExecuteTemplate(w, "root", nil)
+	}
+}
+
+func (s *Server) handleHistory() http.HandlerFunc {
 	type PageData struct {
 		Collection Collection
 		Docket     Docket
 	}
 
-	var indexHTML = []HTMLFile{
+	var page = []HTMLFile{
 		RootHTML,
 		HeadHTML,
 		LayoutHTML,
+		HistoryHTML,
 	}
 
 	var funcMap = template.FuncMap{
@@ -133,7 +158,7 @@ func (s *Server) handleIndex() http.HandlerFunc {
 			Docket:     docket,
 		}
 
-		tmpl := compileTemplates("index.html", s, indexHTML, funcMap)
+		tmpl := compileTemplates("index.html", s, page, funcMap)
 
 		tmpl.ExecuteTemplate(w, "root", data)
 	}
