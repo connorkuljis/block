@@ -190,6 +190,11 @@ func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 		Valid:   true,
 	}
 
+	// allow nullable for timer/stopwatch
+	if inCompletionPercent < 0 {
+		completionPercent.Valid = false
+	}
+
 	completed := 0
 	if inCompletionPercent == 100.0 {
 		completed = 1

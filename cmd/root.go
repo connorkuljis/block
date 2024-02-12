@@ -119,6 +119,7 @@ func init() {
 		resetDNSCmd,
 		generateCmd,
 		serveCmd,
+		timerCmd,
 	)
 
 	rootCmd.PersistentFlags().BoolP("noBlock", "f", false, "Do not block hosts file.")
