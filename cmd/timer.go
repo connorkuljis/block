@@ -37,6 +37,10 @@ var timerCmd = &cobra.Command{
 
 func timer(currentTask tasks.Task) {
 	blocker := blocker.NewBlocker(false)
+	err := blocker.BlockAndReset()
+	if err != nil {
+		log.Println(err)
+	}
 	// initialise remote
 	r := interactive.Remote{
 		Task:    currentTask,
@@ -51,6 +55,11 @@ func timer(currentTask tasks.Task) {
 	go interactive.PollInput(r)
 	go incrementer(r)
 	r.Wg.Wait()
+
+	err = blocker.Unblock()
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func incrementer(r interactive.Remote) {
