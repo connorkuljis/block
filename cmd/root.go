@@ -44,7 +44,6 @@ var rootCmd = &cobra.Command{
 		// get current time
 		createdAt := time.Now()
 
-		disableBlocker, _ = cmd.Root().Flags().GetBool("noBlock")
 		screenRecorder, _ = cmd.Root().Flags().GetBool("screenRecorder")
 		debug, _ = cmd.Root().Flags().GetBool("debug")
 
@@ -53,8 +52,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		slog.Debug("starting blocker and resetting dns")
-		blocker := blocker.NewBlocker(disableBlocker)
-		if err = blocker.BlockAndReset(); err != nil {
+		blocker := blocker.NewBlocker()
+		if err = blocker.Enable(); err != nil {
 			slog.Error(err.Error())
 		}
 		slog.Debug("successfully enabled blocker and reset dns")
@@ -103,7 +102,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		slog.Debug("stopping blocker and reset dns")
-		if err = blocker.Unblock(); err != nil {
+		if err = blocker.Disable(); err != nil {
 			log.Print(err)
 		}
 		slog.Debug("successfully stopped blocker and reset dns")
@@ -122,10 +121,8 @@ func init() {
 		timerCmd,
 	)
 
-	rootCmd.PersistentFlags().BoolP("noBlock", "f", false, "Do not block hosts file.")
 	rootCmd.PersistentFlags().BoolP("screenRecorder", "x", false, "Enable screen recorder.")
 	rootCmd.PersistentFlags().Bool("debug", false, "Logs additional details.")
-
 }
 
 func Execute() error {

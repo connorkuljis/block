@@ -1,6 +1,7 @@
 package interactive
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -48,14 +49,15 @@ func PollInput(r Remote) {
 
 				if paused {
 					r.Pause <- true
-					err := r.Blocker.Unblock()
+					err := r.Blocker.Disable()
 					if err != nil {
 						log.Print(err)
 					}
+					fmt.Println("paused, unblocking sites")
 					spinner.Start()
 				} else {
 					spinner.Stop()
-					err := r.Blocker.BlockAndReset()
+					err := r.Blocker.Enable()
 					if err != nil {
 						log.Print(err)
 					}
