@@ -48,12 +48,12 @@ func PollInput(r Remote) {
 				paused = !paused
 
 				if paused {
-					r.Pause <- true
 					err := r.Blocker.Disable()
 					if err != nil {
 						log.Print(err)
 					}
 					fmt.Println("paused, unblocking sites")
+					r.Pause <- true
 					spinner.Start()
 				} else {
 					spinner.Stop()

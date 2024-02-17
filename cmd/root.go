@@ -53,7 +53,7 @@ var rootCmd = &cobra.Command{
 
 		slog.Debug("starting blocker and resetting dns")
 		blocker := blocker.NewBlocker()
-		if err = blocker.Enable(); err != nil {
+		if err = blocker.Disable(); err != nil {
 			slog.Error(err.Error())
 		}
 		slog.Debug("successfully enabled blocker and reset dns")
@@ -102,7 +102,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		slog.Debug("stopping blocker and reset dns")
-		if err = blocker.Disable(); err != nil {
+		if err = blocker.Enable(); err != nil {
 			log.Print(err)
 		}
 		slog.Debug("successfully stopped blocker and reset dns")
