@@ -9,7 +9,7 @@ import (
 
 type Remote struct {
 	Task    tasks.Task
-	Blocker blocker.Blocker
+	Blocker blocker.HostsBlocker
 
 	Wg     *sync.WaitGroup
 	Pause  chan bool

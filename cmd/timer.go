@@ -36,8 +36,8 @@ var timerCmd = &cobra.Command{
 }
 
 func timer(currentTask tasks.Task) {
-	blocker := blocker.NewBlocker()
-	err := blocker.Enable()
+	blocker := blocker.NewHostsBlocker()
+	err := blocker.Start()
 	if err != nil {
 		log.Println(err)
 	}
@@ -56,7 +56,7 @@ func timer(currentTask tasks.Task) {
 	go incrementer(r)
 	r.Wg.Wait()
 
-	err = blocker.Disable()
+	err = blocker.Stop()
 	if err != nil {
 		log.Println(err)
 	}

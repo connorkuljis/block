@@ -48,7 +48,7 @@ func PollInput(r Remote) {
 				paused = !paused
 
 				if paused {
-					err := r.Blocker.Disable()
+					err := r.Blocker.Start()
 					if err != nil {
 						log.Print(err)
 					}
@@ -57,7 +57,7 @@ func PollInput(r Remote) {
 					spinner.Start()
 				} else {
 					spinner.Stop()
-					err := r.Blocker.Enable()
+					err := r.Blocker.Stop()
 					if err != nil {
 						log.Print(err)
 					}

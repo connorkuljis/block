@@ -3,6 +3,7 @@ package blocker
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os"
 )
 
@@ -11,38 +12,34 @@ const (
 	HostsFile = "/etc/hosts"
 )
 
-type Blocker struct {
-	HostsFile string
-	IsEnabled bool
+type HostsBlocker struct {
+	hostsFile string
+	isEnabled bool
 }
 
-func NewBlocker() Blocker {
-	return Blocker{
-		HostsFile: HostsFile,
-	}
+func NewHostsBlocker() HostsBlocker {
+	return HostsBlocker{hostsFile: HostsFile}
 }
 
-// enables the blocker
-func (b *Blocker) Enable() error {
-	b.IsEnabled = true
-	err := updateBlockList(b)
+func (b *HostsBlocker) Start() error {
+	shouldBlock := true
+	err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// disables the blocker
-func (b *Blocker) Disable() error {
-	b.IsEnabled = false
-	err := updateBlockList(b)
+func (b *HostsBlocker) Stop() error {
+	shouldBlock := false
+	err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func prependComment(line []byte) []byte {
+func addComment(line []byte) []byte {
 	// true if '#' byte exists in slice
 	isComment := bytes.IndexByte(line, '#') == 0
 
@@ -52,7 +49,7 @@ func prependComment(line []byte) []byte {
 	return append([]byte("# "), line...)
 }
 
-func removeComment(line []byte) []byte {
+func stripComment(line []byte) []byte {
 	isComment := bytes.IndexByte(line, '#') == 0
 
 	if isComment {
@@ -61,43 +58,36 @@ func removeComment(line []byte) []byte {
 	return line
 }
 
-func updateBlockList(b *Blocker) error {
+func updateBlockList(target string, shouldBlock bool) error {
 	// open the special hosts file, (requires root password)
-	file, err := os.Open(b.HostsFile)
+	file, err := os.Open(target)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	// scan the file
 	sc := bufio.NewScanner(file)
 
 	var data []byte
 	found := false
 	// iterate over the line until stop token found
-	for sc.Scan() && !found {
+	for sc.Scan() {
 		line := sc.Bytes()
 
-		foundStopToken := bytes.IndexByte(line, StopToken) >= 0
+		lineHasTok := bytes.IndexByte(line, StopToken) >= 0
 
-		if foundStopToken {
+		if lineHasTok {
 			found = true
-		} else {
-			// parse the line depending if blocker is enabled.
-			if b.IsEnabled {
-				line = removeComment(line)
+		}
+
+		if !found {
+			if shouldBlock {
+				line = stripComment(line)
 			} else {
-				line = prependComment(line)
+				line = addComment(line)
 			}
 		}
 
-		line = append(line, '\n')
-		data = append(data, line...)
-	}
-
-	// scan remainder of file
-	for sc.Scan() {
-		line := sc.Bytes()
 		line = append(line, '\n')
 		data = append(data, line...)
 	}
@@ -106,7 +96,9 @@ func updateBlockList(b *Blocker) error {
 		return err
 	}
 
-	err = overwriteFile(b.HostsFile, data)
+	fmt.Println(string(data))
+
+	err = overwriteFile(target, data)
 	if err != nil {
 		return err
 	}

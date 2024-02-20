@@ -19,7 +19,7 @@ func TestRemoveComment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := removeComment(tc.input)
+			result := stripComment(tc.input)
 			if !reflect.DeepEqual(result, tc.expected) {
 				t.Errorf("Expected: %v, got: %v", tc.expected, result)
 			}
@@ -41,7 +41,7 @@ func TestPrependComment(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := prependComment(tc.input)
+			result := addComment(tc.input)
 			if !reflect.DeepEqual(result, tc.expected) {
 				t.Errorf("Expected: %v, got: %v", tc.expected, result)
 			}
