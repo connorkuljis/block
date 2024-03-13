@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"text/template"
+	"time"
 
 	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/go-chi/chi/v5"
@@ -117,10 +118,12 @@ func (s *Server) handleHistory() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		t, err := tasks.GetAllCompletedTasks()
+		t, err := tasks.GetTasksByDate(time.Now())
 		if err != nil {
 			log.Print(err)
 		}
+
+		log.Println(t)
 
 		grouped := groupByDate(t)
 
