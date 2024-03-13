@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log/slog"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -9,8 +9,8 @@ import (
 )
 
 type AppConfig struct {
-	HiddenConfig HiddenConfig
-	RootConfig   RootConfig
+	HiddenConfig *HiddenConfig
+	RootConfig   *RootConfig
 }
 
 var Cfg AppConfig
@@ -21,27 +21,24 @@ func InitConfig() error {
 		return err
 	}
 
-	hiddenConfig := NewHiddenConfig(homeDir)
-	rootConfig := NewRootConfig(homeDir)
-
-	slog.Debug("Checking: " + hiddenConfig.Path)
-	if err := makeDirIfNotExists(hiddenConfig.Path); err != nil {
-		return err
-	}
-
-	slog.Debug("Checking: " + rootConfig.Path)
-	if err := makeDirIfNotExists(rootConfig.Path); err != nil {
-		return err
-	}
-
-	slog.Debug("Checking: " + hiddenConfig.ConfigFilename)
-	if err := loadOrMakeConfigFileIfNotExists(hiddenConfig); err != nil {
-		return err
-	}
-
 	Cfg = AppConfig{
-		HiddenConfig: hiddenConfig,
-		RootConfig:   rootConfig,
+		HiddenConfig: NewHiddenConfig(homeDir),
+		RootConfig:   NewRootConfig(homeDir),
+	}
+
+	log.Println("Checking: " + Cfg.HiddenConfig.Path)
+	if err := makeDirIfNotExists(Cfg.HiddenConfig.Path); err != nil {
+		return err
+	}
+
+	log.Println("Checking: " + Cfg.RootConfig.Path)
+	if err := makeDirIfNotExists(Cfg.RootConfig.Path); err != nil {
+		return err
+	}
+
+	log.Println("Loading config: ", Cfg.HiddenConfig)
+	if err := loadOrMakeConfigFileIfNotExists(Cfg.HiddenConfig); err != nil {
+		return err
 	}
 
 	return nil
@@ -58,7 +55,7 @@ func makeDirIfNotExists(path string) error {
 	return nil
 }
 
-func loadOrMakeConfigFileIfNotExists(h HiddenConfig) error {
+func loadOrMakeConfigFileIfNotExists(h *HiddenConfig) error {
 	_, err := os.Stat(filepath.Join(h.Path, h.ConfigFilename))
 	if os.IsNotExist(err) {
 		if err = makeDefaultConfigFile(h); err != nil {
@@ -66,15 +63,22 @@ func loadOrMakeConfigFileIfNotExists(h HiddenConfig) error {
 		}
 		return nil
 	} else {
-		loadConfig(h)
-		sanitiseConfigValues(h)
+		err := loadConfig(h)
+		if err != nil {
+			return err
+		}
+
+		err = sanitiseConfigValues(h)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // create config file and write default values
-func makeDefaultConfigFile(h HiddenConfig) error {
+func makeDefaultConfigFile(h *HiddenConfig) error {
 	configFile, err := os.Create(filepath.Join(h.Path, h.ConfigFilename))
 	if err != nil {
 		return err
@@ -94,18 +98,20 @@ func makeDefaultConfigFile(h HiddenConfig) error {
 	return nil
 }
 
-func loadConfig(h HiddenConfig) error {
-	contents, err := os.ReadFile(h.Path)
+func loadConfig(h *HiddenConfig) error {
+	contents, err := os.ReadFile(filepath.Join(h.Path, h.ConfigFilename))
 	if err != nil {
 		return err
 	}
+
 	if err = yaml.Unmarshal(contents, &h.Config); err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func sanitiseConfigValues(h HiddenConfig) error {
+func sanitiseConfigValues(h *HiddenConfig) error {
 	if _, err := os.Stat(h.Config.FfmpegRecordingsPath); err != nil {
 		return err
 	}

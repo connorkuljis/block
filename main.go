@@ -15,18 +15,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Loaded config.")
 
 	err = tasks.InitDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// if err = cmd.Execute(); err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Println("Loaded db.")
 
 	app := &cli.App{
-		Commands: []*cli.Command{cmd.RootCmd},
+		Name:  "block",
+		Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
+		Commands: []*cli.Command{
+			cmd.RootCmd,
+			cmd.HistoryCmd,
+		},
 	}
 
 	if err := app.Run(os.Args); err != nil {

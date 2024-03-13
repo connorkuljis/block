@@ -6,47 +6,46 @@ import (
 	"time"
 
 	"github.com/connorkuljis/block-cli/tasks"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v2"
 )
 
-var historyCmd = &cobra.Command{
-	Use:   "history",
-	Short: "Show task history.",
-	Run: func(cmd *cobra.Command, args []string) {
+var HistoryCmd = &cli.Command{
+	Name:  "history",
+	Usage: "display task history.",
+	Action: func(ctx *cli.Context) error {
 		var all []tasks.Task
 
-		if len(args) == 0 {
+		if ctx.NArg() == 0 {
 			var err error
 			all, err = tasks.GetAllTasks()
 			if err != nil {
 				log.Fatal(err)
 			}
-			tasks.RenderTable(all)
-			return
 		}
 
-		if len(args) == 1 {
-			switch strings.ToLower(args[0]) {
+		if ctx.NArg() == 1 {
+			switch strings.ToLower(ctx.Args().Get(0)) {
 			case "today":
-				all, err := tasks.GetTasksByDate(time.Now())
+				var err error
+				all, err = tasks.GetTasksByDate(time.Now())
 				if err != nil {
-					log.Fatal(err)
+					return err
 				}
-				tasks.RenderTable(all)
-				return
 			default:
-				inDate, err := time.Parse("2006-01-02", args[0])
+				inDate, err := time.Parse("2006-01-02", ctx.Args().Get(0))
 				if err != nil {
-					log.Fatal("Error parsing date: " + args[0])
+					log.Fatal("Error parsing date: " + ctx.Args().Get(0))
 				}
 
 				all, err = tasks.GetTasksByDate(inDate)
 				if err != nil {
-					log.Fatal(err)
+					return err
 				}
-				tasks.RenderTable(all)
-				return
 			}
 		}
+
+		tasks.RenderTable(all)
+
+		return nil
 	},
 }

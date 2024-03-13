@@ -29,8 +29,10 @@ type App struct {
 }
 
 var RootCmd = &cli.Command{
-	Name:  "start",
-	Usage: "start the blocker",
+	Name:      "start",
+	Usage:     "start the blocker.",
+	Args:      true,
+	ArgsUsage: "[duration] [taskname]",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  "no-blocker",

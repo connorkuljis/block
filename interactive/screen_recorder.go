@@ -32,8 +32,7 @@ type FfmpegCommandOpts struct {
 	OutputFile  string
 	FrameRate   string
 
-	// linux only
-	Resolution string
+	Resolution string // linux only
 }
 
 func FfmpegCaptureScreen(remote *Remote) {

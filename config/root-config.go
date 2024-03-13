@@ -14,8 +14,8 @@ const (
 	DbName            = "app_data.db?_time_format=sqlite"
 )
 
-func NewRootConfig(homeDir string) RootConfig {
-	return RootConfig{
+func NewRootConfig(homeDir string) *RootConfig {
+	return &RootConfig{
 		Path:       filepath.Join(homeDir, RootConfigDirName),
 		DbFileName: DbName,
 	}
