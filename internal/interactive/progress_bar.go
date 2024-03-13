@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/tasks"
-	"github.com/connorkuljis/block-cli/utils"
+	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/internal/utils"
 	"github.com/schollz/progressbar/v3"
 )
 

@@ -1,5 +1,5 @@
 build:
-	go build -o block
+	go build ./... 
 
 run: 
 	./block

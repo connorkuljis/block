@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
 )

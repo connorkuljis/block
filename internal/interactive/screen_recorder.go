@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/connorkuljis/block-cli/config"
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/fatih/color"
 )
 
