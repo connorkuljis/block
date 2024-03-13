@@ -30,6 +30,7 @@ func main() {
 			cmd.RootCmd,
 			cmd.HistoryCmd,
 			cmd.DeleteTaskCmd,
+			cmd.ServeCmd,
 		},
 	}
 

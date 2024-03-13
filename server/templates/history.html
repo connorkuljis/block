@@ -1,118 +1,23 @@
 {{ define "view" }}
 <div>
-  <div class="layout-grid-container">
-    <div class="label">Date</div>
-    <div class="label">Hours</div>
-    <div class="label">Timeline</div>
-    {{ range .Collection}}
-    <div class="date">{{ .DateStr }}</div>
-    <div class="docket">{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</div>
-    <div class="gantt-grid-container">
-      {{ range .Tasks }}
-      <div class="gantt-item">
-        {{ printf "%.0f" .ActualDuration.Float64 }}
-        <style>
-          this {
-          	text-align: center;
-          	position: relative;
-          	grid-row: 1 / 2;
-          	grid-column: {{ add (add (mul .CreatedAt.Hour 60) .CreatedAt.Minute) 1 }} / {{ add (add (mul .FinishedAt.Time.Hour 60) .FinishedAt.Time.Minute) 1 }};
-          }
-        </style>
-      </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Hours</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {{ range .Collection}}
+      <tr>
+        <td>{{ .DateStr }}</td>
+        <td>{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</td>
+      </tr>
       {{ end }}
-    </div>
-    {{ end }}
 
-    <div>&NonBreakingSpace;</div>
-    <div>&NonBreakingSpace;</div>
-    <div class="gantt-grid-container">
-      <div style="grid-column: 1 / span 59; text-align: center">0</div>
-      {{range $index, $value := seq 1 23}}
-      <div
-        style="grid-column: {{ add 1 (mul $value 60) }} / span 59; text-align: center; border-left: 1px solid var(--anduril-metal);"
-      >
-        {{ $value }}
-      </div>
-      {{end}}
-    </div>
-
-    <div>total</div>
-    <div>{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</div>
-    <div>&NonBreakingSpace;</div>
-  </div>
-
-  <style>
-    this {
-      min-height: 100dvh;
-      padding: 2rem;
-
-      --anduril-titan: #4e5354;
-      --anduril-metal: #6f7473;
-      --anduril-white: #e2e5e0;
-      --anduril-blue: #007d9c;
-
-      --linear-dark-blue: #12132d;
-      --linear-navy: #010314;
-      /* background: radial-gradient(circle at bottom right, var(--linear-dark-blue) 0, var(--linear-navy), var(--linear-dark-blue) 100%); */
-    }
-
-    this .label {
-      text-align: center;
-      text-decoration: underline;
-      margin-bottom: 1rem;
-    }
-
-    this .date,
-    this .docket {
-      font-family: "Courier New", Courier, monospace;
-      display: flex;
-      align-items: center;
-    }
-
-    this .docket {
-      width: 100%;
-      text-align: right;
-    }
-
-    this .layout-grid-container {
-      display: grid;
-      grid-template-columns: auto auto 1fr;
-      column-gap: 1rem;
-
-      border-radius: 1rem;
-      padding: 1rem;
-      border: 1px solid rgba(117, 92, 3, 0.18);
-      background: linear-gradient(
-        180deg,
-        rgba(178, 155, 90, 0.1),
-        rgba(178, 155, 90, 0) 56.56%
-      );
-    }
-
-    this .gantt-grid-container {
-      display: grid;
-      grid-template-columns: repeat(1440, 1fr);
-      background: #191919;
-    }
-
-    this .gantt-item {
-      --lime: #d1fea4;
-      --sky: #a2f9fc;
-
-      --gradient: linear-gradient(to right, var(--sky), var(--lime));
-
-      background: var(--gradient);
-      text-align: center;
-      color: black;
-      text-indent: -9999px;
-      margin: 2px;
-      border-radius: 2px;
-
-      &:hover {
-        text-indent: 0;
-      }
-    }
-  </style>
+      <div>{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</div>
+    </tbody>
+  </table>
 </div>
 {{ end }}

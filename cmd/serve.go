@@ -2,13 +2,17 @@ package cmd
 
 import (
 	"github.com/connorkuljis/block-cli/server"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v2"
 )
 
-var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Serves http server.",
-	Run: func(cmd *cobra.Command, args []string) {
-		server.Serve()
+var ServeCmd = &cli.Command{
+	Name:  "serve",
+	Usage: "Serves http server.",
+	Action: func(ctx *cli.Context) error {
+		err := server.Serve()
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
