@@ -9,7 +9,7 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
-func PollInput(r Remote) {
+func PollInput(remote *Remote) {
 	err := keyboard.Open()
 	if err != nil {
 		panic(err)
@@ -27,8 +27,8 @@ func PollInput(r Remote) {
 	spinner.Suffix = " Press any key to resume."
 	for {
 		select {
-		case <-r.Finish:
-			r.Wg.Done()
+		case <-remote.Finish:
+			remote.Wg.Done()
 			return
 		case event := <-keysEvents:
 			if event.Err != nil {
@@ -38,31 +38,31 @@ func PollInput(r Remote) {
 			if event.Key == keyboard.KeyCtrlC || event.Key == keyboard.KeyEsc {
 				if paused {
 					spinner.Stop()
-					close(r.Pause)
+					close(remote.Pause)
 				}
-				close(r.Cancel)
-				r.Wg.Done()
+				close(remote.Cancel)
+				remote.Wg.Done()
 				return
 			} else { // any other key press
 
 				paused = !paused
 
 				if paused {
-					err := r.Blocker.Start()
+					err := remote.Blocker.Stop()
 					if err != nil {
 						log.Print(err)
 					}
 					fmt.Println("paused, unblocking sites")
-					r.Pause <- true
+					remote.Pause <- true
 					spinner.Start()
 				} else {
 					spinner.Stop()
-					err := r.Blocker.Stop()
+					err := remote.Blocker.Start()
 					if err != nil {
 						log.Print(err)
 					}
 
-					r.Pause <- true
+					remote.Pause <- true
 				}
 			}
 		}

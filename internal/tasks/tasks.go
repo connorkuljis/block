@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/config"
-	"github.com/connorkuljis/block-cli/utils"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/utils"
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
@@ -213,20 +213,21 @@ func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 	return nil
 }
 
-func DeleteTaskByID(id string) error {
+func DeleteTaskByID(id string) (int64, error) {
 	query := "DELETE FROM Tasks WHERE id = ?"
+	var rowsAffected int64
 
 	result, err := db.Exec(query, id)
 	if err != nil {
-		return err
+		return rowsAffected, err
 	}
 
-	_, err = result.RowsAffected()
+	rowsAffected, err = result.RowsAffected()
 	if err != nil {
-		return err
+		return rowsAffected, err
 	}
 
-	return nil
+	return rowsAffected, nil
 }
 
 func GetTasksByDate(inDate time.Time) ([]Task, error) {

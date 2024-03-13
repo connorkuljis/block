@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/tasks"
-	"github.com/connorkuljis/block-cli/utils"
+	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/internal/utils"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -21,8 +21,8 @@ func progressBar(max int) *progressbar.ProgressBar {
 	)
 }
 
-func RenderProgressBar(r Remote) {
-	length := int(r.Task.PlannedDuration * 60) // convert minutes to seconds.
+func RenderProgressBar(remote *Remote) {
+	length := int(remote.Task.PlannedDuration * 60) // convert minutes to seconds.
 	bar := progressBar(length)
 	ticker := time.NewTicker(time.Second * 1)
 
@@ -30,18 +30,18 @@ func RenderProgressBar(r Remote) {
 	paused := false
 	for {
 		select {
-		case <-r.Cancel:
-			saveBarState(r.Task, bar)
-			r.Wg.Done()
+		case <-remote.Cancel:
+			saveBarState(remote.Task, bar)
+			remote.Wg.Done()
 			return
-		case <-r.Pause:
+		case <-remote.Pause:
 			paused = !paused
 		case <-ticker.C:
 			if i == length {
-				saveBarState(r.Task, bar)
+				saveBarState(remote.Task, bar)
 				utils.SendNotification()
-				close(r.Finish)
-				r.Wg.Done()
+				close(remote.Finish)
+				remote.Wg.Done()
 				return
 			}
 

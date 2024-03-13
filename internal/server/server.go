@@ -2,14 +2,14 @@ package server
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"path/filepath"
 	"text/template"
+	"time"
 
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
 )
@@ -39,14 +39,12 @@ const (
 	HeroHTML   HTMLFile = "components/hero.html"
 	FooterHTML HTMLFile = "components/footer.html"
 
-	HistoryHTML   HTMLFile = "history.html"
-	CognitiveHTML HTMLFile = "cognitive.html"
+	HistoryHTML HTMLFile = "history.html"
 )
 
-func Serve() {
+func Serve() error {
 	port := "8080"
 	router := chi.NewMux()
-	store := sessions.NewCookieStore([]byte("special_key"))
 	templateDir := "templates"
 	staticDir := "static"
 
@@ -58,15 +56,16 @@ func Serve() {
 		TemplatesDir: templateDir,
 		StaticDir:    staticDir,
 		FileSystem:   inMemoryFS,
-		Sessions:     store,
 	}
 
 	s.routes()
 
 	err := http.ListenAndServe(":"+s.Port, s.Router)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 func compileTemplates(templateName string, s *Server, files []HTMLFile, funcMap template.FuncMap) *template.Template {
@@ -86,27 +85,7 @@ func compileTemplates(templateName string, s *Server, files []HTMLFile, funcMap 
 
 func (s *Server) routes() {
 	s.Router.Handle("/static/*", http.FileServer(http.FS(s.FileSystem)))
-	s.Router.HandleFunc("/history", s.handleHistory())
-	s.Router.HandleFunc("/cognitive", s.handleCognitive())
-
-	routes := s.Router.Routes()
-	for _, route := range routes {
-		fmt.Printf("http://localhost:%s%s\n", s.Port, route.Pattern)
-	}
-}
-
-func (s *Server) handleCognitive() http.HandlerFunc {
-	var page = []HTMLFile{
-		RootHTML,
-		HeadHTML,
-		LayoutHTML,
-		CognitiveHTML,
-	}
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl := compileTemplates("cognitive", s, page, nil)
-		tmpl.ExecuteTemplate(w, "root", nil)
-	}
+	s.Router.HandleFunc("/", s.handleHistory())
 }
 
 func (s *Server) handleHistory() http.HandlerFunc {
@@ -139,23 +118,30 @@ func (s *Server) handleHistory() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		t, err := tasks.GetAllCompletedTasks()
+		tasks, err := tasks.GetTasksByDate(time.Now())
 		if err != nil {
 			log.Print(err)
 		}
 
-		grouped := groupByDate(t)
+		log.Println(tasks)
+
+		// grouped := groupByDate(t)
 
 		totalMinutes := 0.0
-		for _, day := range grouped {
-			totalMinutes += day.TotalMinutes
+		for _, task := range tasks {
+			totalMinutes += task.ActualDuration.Float64
 		}
 
-		docket := minuteToDocket(totalMinutes)
+		// docket := minuteToDocket(totalMinutes)
 
-		data := PageData{
-			Collection: grouped,
-			Docket:     docket,
+		// data := PageData{
+		// 	Collection: grouped,
+		// 	Docket:     docket,
+		// }
+
+		data := map[string]any{
+			"Tasks":        tasks,
+			"TotalMinutes": totalMinutes,
 		}
 
 		tmpl := compileTemplates("index.html", s, page, funcMap)

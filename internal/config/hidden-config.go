@@ -23,13 +23,13 @@ const (
 	DefaultAvfoundationDevice   = "1:0"
 )
 
-func NewHiddenConfig(homeDir string) HiddenConfig {
+func NewHiddenConfig(homeDir string) *HiddenConfig {
 	config := Config{
 		FfmpegRecordingsPath: DefaultFfmpegRecordingsPath,
 		AvfoundationDevice:   DefaultAvfoundationDevice,
 	}
 
-	return HiddenConfig{
+	return &HiddenConfig{
 		Path:           filepath.Join(homeDir, HiddenConfigDirName),
 		ConfigFilename: ConfigFileName,
 		Config:         config,

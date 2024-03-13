@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/connorkuljis/block-cli/config"
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/fatih/color"
 )
 
@@ -32,17 +32,16 @@ type FfmpegCommandOpts struct {
 	OutputFile  string
 	FrameRate   string
 
-	// linux only
-	Resolution string
+	Resolution string // linux only
 }
 
-func FfmpegCaptureScreen(r Remote) {
+func FfmpegCaptureScreen(remote *Remote) {
 	var cmd *exec.Cmd
 	var cmdArgs []string
 
 	recording := filepath.Join(config.GetFfmpegRecordingPath(), conventionalFilename(
 		time.Now().Format(TimeFormat),
-		r.Task.Name,
+		remote.Task.Name,
 		".mkv",
 	))
 
@@ -86,7 +85,7 @@ func FfmpegCaptureScreen(r Remote) {
 
 	default:
 		log.Println("Screen capture is not supported on this platform. Continuing...")
-		r.Wg.Done()
+		remote.Wg.Done()
 		return
 	}
 
@@ -99,14 +98,14 @@ func FfmpegCaptureScreen(r Remote) {
 	err := cmd.Start()
 	if err != nil {
 		log.Print(err)
-		r.Wg.Done()
+		remote.Wg.Done()
 		return
 	}
 
 	select {
-	case <-r.Cancel:
+	case <-remote.Cancel:
 		terminate(cmd)
-	case <-r.Finish:
+	case <-remote.Finish:
 		terminate(cmd)
 	}
 
@@ -120,17 +119,17 @@ func FfmpegCaptureScreen(r Remote) {
 		log.Print(stdout.String())
 		log.Print(stderr.String())
 		log.Print(err)
-		r.Wg.Done()
+		remote.Wg.Done()
 		return
 	}
 
 	log.Print("Successfully captured screen recording at: " + recording)
 
-	if err = tasks.UpdateScreenURL(r.Task, recording); err != nil {
+	if err = tasks.UpdateScreenURL(remote.Task, recording); err != nil {
 		log.Print(err)
 	}
 
-	r.Wg.Done()
+	remote.Wg.Done()
 }
 
 func terminate(cmd *exec.Cmd) {
