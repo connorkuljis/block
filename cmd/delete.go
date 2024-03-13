@@ -1,23 +1,33 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/connorkuljis/block-cli/tasks"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v2"
 )
 
-var deleteTaskCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Deletes a task by given ID.",
-	Run: func(cmd *cobra.Command, args []string) {
-		id := args[0]
-		err := tasks.DeleteTaskByID(id)
-		if err != nil {
-			log.Fatal(err)
-			return
+var DeleteTaskCmd = &cli.Command{
+	Name:  "delete",
+	Usage: "Deletes a task by given ID.",
+	Action: func(ctx *cli.Context) error {
+		if ctx.NArg() < 1 {
+			return errors.New("Empty arguments")
 		}
-		fmt.Println("Deleted: ", id)
+
+		id := ctx.Args().Get(0)
+		rowsAffected, err := tasks.DeleteTaskByID(id)
+		if err != nil {
+			return err
+		}
+
+		if rowsAffected > 0 {
+			fmt.Printf("Successfully deleted element by id: %s, (%d rows affected).\n", id, rowsAffected)
+		} else {
+			return errors.New("Unable to delete element with id: " + id)
+		}
+
+		return nil
 	},
 }

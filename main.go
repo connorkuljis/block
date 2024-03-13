@@ -29,6 +29,7 @@ func main() {
 		Commands: []*cli.Command{
 			cmd.RootCmd,
 			cmd.HistoryCmd,
+			cmd.DeleteTaskCmd,
 		},
 	}
 
