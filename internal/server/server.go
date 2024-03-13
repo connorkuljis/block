@@ -118,25 +118,30 @@ func (s *Server) handleHistory() http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		t, err := tasks.GetTasksByDate(time.Now())
+		tasks, err := tasks.GetTasksByDate(time.Now())
 		if err != nil {
 			log.Print(err)
 		}
 
-		log.Println(t)
+		log.Println(tasks)
 
-		grouped := groupByDate(t)
+		// grouped := groupByDate(t)
 
 		totalMinutes := 0.0
-		for _, day := range grouped {
-			totalMinutes += day.TotalMinutes
+		for _, task := range tasks {
+			totalMinutes += task.ActualDuration.Float64
 		}
 
-		docket := minuteToDocket(totalMinutes)
+		// docket := minuteToDocket(totalMinutes)
 
-		data := PageData{
-			Collection: grouped,
-			Docket:     docket,
+		// data := PageData{
+		// 	Collection: grouped,
+		// 	Docket:     docket,
+		// }
+
+		data := map[string]any{
+			"Tasks":        tasks,
+			"TotalMinutes": totalMinutes,
 		}
 
 		tmpl := compileTemplates("index.html", s, page, funcMap)

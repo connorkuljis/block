@@ -3,21 +3,34 @@
   <table>
     <thead>
       <tr>
+        <th>ID</th>
         <th>Date</th>
-        <th>Hours</th>
+        <th>Actual Duration</th>
+        <th>Completed</th>
       </tr>
     </thead>
 
     <tbody>
-      {{ range .Collection}}
+      {{ range .Tasks}}
       <tr>
-        <td>{{ .DateStr }}</td>
-        <td>{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</td>
+        <td>{{ .Name }}</td>
+        <td>{{ .CreatedAt }}</td>
+        <td>{{ .ActualDuration.Float64 }}</td>
+        <td>{{ .Completed}}</td>
       </tr>
       {{ end }}
 
-      <div>{{ .Docket.Hours}}hrs {{ .Docket.Minutes }}mins</div>
+      <tr>
+        <td>{{ .Total }}</td>
+      </tr>
     </tbody>
   </table>
+
+  <style>
+    this table,
+    this tr {
+      border: 1px solid black;
+    }
+  </style>
 </div>
 {{ end }}
