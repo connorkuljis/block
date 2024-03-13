@@ -1,133 +1,181 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"log/slog"
-	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/connorkuljis/block-cli/blocker"
 	"github.com/connorkuljis/block-cli/interactive"
 	"github.com/connorkuljis/block-cli/tasks"
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
+	"github.com/urfave/cli/v2"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "block",
-	Short: "Expects a duration in minutes, followed by a task name. Eg: block start [duration] [task name]",
-	Args:  cobra.ArbitraryArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		disableBlocker := false
-		screenRecorder := false
-		debug := false
-		duration := 0.0
-		name := ""
+type App struct {
+	hasBlocker        bool
+	hasScreenRecorder bool
+	hasDebug          bool
 
-		// check args
-		if len(args) < 1 || len(args) > 2 {
-			log.Fatal("Invalid number of arguments. Usage: block start <float> [name]")
-		}
+	startTime time.Time
+	endTime   time.Time
 
-		duration, err := strconv.ParseFloat(args[0], 64)
+	duration float64
+	taskName string
+
+	currentTask tasks.Task
+	blocker     blocker.Blocker
+}
+
+var RootCmd = &cli.Command{
+	Name:  "start",
+	Usage: "start the blocker",
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "no-blocker",
+			Usage: "Disables the blocker.",
+		},
+		&cli.BoolFlag{
+			Name:  "capture",
+			Usage: "Enables screen capture.",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		var app = App{}
+		err := app.Init(ctx)
 		if err != nil {
-			log.Fatal(fmt.Errorf("Invalid argument, error converting %s to float. Please provide a valid float.", args[0]))
+			return err
 		}
 
-		if len(args) == 2 {
-			name = args[1]
+		err = app.Start()
+		if err != nil {
+			return err
 		}
 
-		// get current time
-		createdAt := time.Now()
-
-		screenRecorder, _ = cmd.Root().Flags().GetBool("screenRecorder")
-		debug, _ = cmd.Root().Flags().GetBool("debug")
-
-		if debug {
-			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})))
+		err = app.SaveAndExit()
+		if err != nil {
+			return err
 		}
 
-		slog.Debug("starting blocker and resetting dns")
-		blocker := blocker.NewHostsBlocker()
-		if err = blocker.Stop(); err != nil {
-			slog.Error(err.Error())
-		}
-		slog.Debug("successfully enabled blocker and reset dns")
-
-		// print to standard out
-		color.Red("To exit press Control-C. Any key to pause.")
-		currentTask := tasks.InsertTask(tasks.NewTask(name, duration, !disableBlocker, screenRecorder))
-		fmt.Printf("Starting a timer for %0.1f minutes\n", currentTask.PlannedDuration)
-
-		// initialise remote
-		r := interactive.Remote{
-			Task:    currentTask,
-			Blocker: blocker,
-			Wg:      &sync.WaitGroup{},
-			Pause:   make(chan bool, 1),
-			Cancel:  make(chan bool, 1),
-			Finish:  make(chan bool, 1),
-		}
-
-		// run the configured goroutines
-		r.Wg.Add(2)
-
-		slog.Debug("Rendering progress bar")
-		go interactive.RenderProgressBar(r)
-
-		slog.Debug("Polling input")
-		go interactive.PollInput(r)
-
-		if screenRecorder {
-			r.Wg.Add(1)
-			slog.Debug("Starting screen recorder")
-			go interactive.FfmpegCaptureScreen(r)
-		}
-
-		// wait for the goroutines to finish
-		r.Wg.Wait()
-		slog.Debug("Finished waiting on goroutines")
-
-		// calculation
-		finishedAt := time.Now()
-		actualDuration := finishedAt.Sub(createdAt)
-
-		// persist calculations
-		if err = tasks.UpdateFinishTimeAndDuration(currentTask, finishedAt, actualDuration); err != nil {
-			log.Fatal(err)
-		}
-
-		slog.Debug("stopping blocker and reset dns")
-		if err = blocker.Start(); err != nil {
-			log.Print(err)
-		}
-		slog.Debug("successfully stopped blocker and reset dns")
-
-		fmt.Println("Goodbye.")
+		return nil
 	},
 }
 
-func init() {
-	rootCmd.AddCommand(
-		historyCmd,
-		deleteTaskCmd,
-		resetDNSCmd,
-		generateCmd,
-		serveCmd,
-		timerCmd,
-	)
+// Init contructs the app state from the cli context
+func (app *App) Init(ctx *cli.Context) error {
+	app.startTime = time.Now()
 
-	rootCmd.PersistentFlags().BoolP("screenRecorder", "x", false, "Enable screen recorder.")
-	rootCmd.PersistentFlags().Bool("debug", false, "Logs additional details.")
-}
+	// validate args length
+	if ctx.NArg() < 1 {
+		return errors.New("Error, no arguments provided")
+	}
 
-func Execute() error {
-	if err := rootCmd.Execute(); err != nil {
+	// parse args into duration and taskname
+	duration, taskName, err := parseArgs(ctx)
+	if err != nil {
 		return err
 	}
+
+	// set app options from flags
+	app.hasBlocker = true
+	if ctx.Bool("no-blocker") {
+		app.hasBlocker = false
+	}
+
+	app.hasScreenRecorder = ctx.Bool("capture")
+
+	if app.hasBlocker {
+		app.blocker = blocker.NewBlocker()
+	}
+
+	app.currentTask = tasks.NewTask(taskName, duration, app.hasBlocker, app.hasScreenRecorder)
+
 	return nil
+}
+
+func (app *App) Start() error {
+	if app.hasBlocker {
+		log.Println("starting blocker and resetting dns")
+
+		err := app.blocker.Start()
+		if err != nil {
+			return err
+		}
+
+		log.Println("successfully enabled blocker and reset dns")
+	}
+
+	app.currentTask = tasks.InsertTask(app.currentTask)
+
+	remote := interactive.NewRemote(app.currentTask, app.blocker)
+	remote.RunTasks(app.hasScreenRecorder)
+
+	log.Println("Finished waiting on goroutines")
+
+	return nil
+}
+
+func (app *App) SaveAndExit() error {
+	app.endTime = time.Now()
+	elapsedTime := app.endTime.Sub(app.startTime)
+
+	err := tasks.UpdateFinishTimeAndDuration(app.currentTask, app.endTime, elapsedTime)
+	if err != nil {
+		return err
+	}
+
+	log.Println("stopping blocker and reset dns")
+
+	if app.hasBlocker {
+		err = app.blocker.Stop()
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Println("successfully stopped blocker and reset dns")
+
+	fmt.Println("Goodbye.")
+	return nil
+
+}
+
+func parseArgs(ctx *cli.Context) (float64, string, error) {
+	duration := 0.0
+	name := ""
+
+	var err error
+	if ctx.NArg() == 1 {
+		durationArg := ctx.Args().Get(0)
+
+		duration, err = convertStringToFloat64(durationArg)
+		if err != nil {
+			return duration, name, err
+		}
+	}
+
+	if ctx.NArg() >= 2 {
+		durationArg := ctx.Args().Get(0)
+		taskNameArg := ctx.Args().Get(1)
+
+		duration, err = convertStringToFloat64(durationArg)
+		if err != nil {
+			return duration, name, err
+		}
+		name = taskNameArg
+
+	}
+
+	return duration, name, nil
+}
+
+func convertStringToFloat64(str string) (float64, error) {
+	var floatVal float64
+	floatVal, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		return floatVal, err
+	}
+
+	return floatVal, nil
 }

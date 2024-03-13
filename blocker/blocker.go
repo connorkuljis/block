@@ -9,19 +9,21 @@ import (
 
 const (
 	StopToken = '~'
-	HostsFile = "/etc/hosts"
 )
 
-type HostsBlocker struct {
+type Blocker struct {
 	hostsFile string
-	isEnabled bool
 }
 
-func NewHostsBlocker() HostsBlocker {
-	return HostsBlocker{hostsFile: HostsFile}
+func NewBlocker() Blocker {
+	hostsFile := "/etc/hosts"
+
+	return Blocker{
+		hostsFile: hostsFile,
+	}
 }
 
-func (b *HostsBlocker) Start() error {
+func (b *Blocker) Start() error {
 	shouldBlock := true
 	err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {
@@ -30,7 +32,7 @@ func (b *HostsBlocker) Start() error {
 	return nil
 }
 
-func (b *HostsBlocker) Stop() error {
+func (b *Blocker) Stop() error {
 	shouldBlock := false
 	err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {

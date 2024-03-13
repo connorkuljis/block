@@ -49,6 +49,13 @@ Spend less time on the computer and more time in the sun.
 # 0.0.0.0 www.facebook.com
 # ~ <-- lines below this character will be untouched by block-cli
 
+# Added by Docker Desktop
+192.168.0.13    host.docker.internal
+192.168.0.13    gateway.docker.internal
+# To allow the same kube context to work on the host and the container:
+127.0.0.1   kubernetes.docker.internal
+# End of section
+
 ```
 
 - The program will uncomment the lines when you start the program, and add them back in when upon exit.
