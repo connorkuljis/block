@@ -60,6 +60,28 @@ func (app *App) Init(ctx *cli.Context) error {
 	return nil
 }
 
+// Init contructs the app state from the cli context
+func (app *App) InitServer(durationStr string, taskName string, block bool, capture bool) error {
+	app.startTime = time.Now()
+
+	duration, err := convertStringToFloat64(durationStr)
+	if err != nil {
+		return err
+	}
+
+	app.hasBlocker = block
+
+	app.hasScreenRecorder = capture
+
+	if app.hasBlocker {
+		app.blocker = blocker.NewBlocker()
+	}
+
+	app.currentTask = tasks.NewTask(taskName, duration, app.hasBlocker, app.hasScreenRecorder)
+
+	return nil
+}
+
 func (app *App) Start() error {
 	if app.hasBlocker {
 		log.Println("starting blocker and resetting dns")
@@ -106,6 +128,7 @@ func (app *App) SaveAndExit() error {
 	return nil
 
 }
+
 func parseArgs(ctx *cli.Context) (float64, string, error) {
 	duration := 0.0
 	name := ""

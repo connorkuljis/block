@@ -1,0 +1,14 @@
+{{ define "root" -}}
+<!doctype html>
+<html lang="en">
+  <!-- begin head -->
+  {{- template "head" . -}}
+  <!-- end head -->
+
+  {{ template "dev-tool" . -}}
+
+  <!-- begin layout -->
+  {{- template "layout" . -}}
+  <!-- end layout -->
+</html>
+{{ end }}

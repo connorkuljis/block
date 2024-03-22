@@ -1,8 +1,4 @@
 # binary files
-block
-block-cli
-main
-
+./block
 .DS_Store
-
 dist/

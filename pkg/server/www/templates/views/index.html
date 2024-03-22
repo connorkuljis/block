@@ -1,0 +1,6 @@
+{{ define "view" }}
+<h2>Index</h2>
+<button hx-get="/start">start</button>
+<button>stop</button>
+
+{{ template "tasks" . }} {{ end }}
