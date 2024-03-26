@@ -3,32 +3,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ .AppData.Title }}</title>
-
-  <link rel="stylesheet" href="/static/css/reset.css" />
-  <link rel="stylesheet" href="/static/css/styles.css" />
-  <link rel="icon" type="img/png" href="../static/icon.png" />
-
-  <script
-    src="https://unpkg.com/htmx.org@1.9.9"
-    integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
-    crossorigin="anonymous"
-  ></script>
-
-  <meta
-    name="htmx-config"
-    content='{"historyCacheSize": 0, "refreshOnHistoryMiss": true}'
-  />
-
   {{- if .AppData.DevMode -}}
   <!-- Dev Mode Settings -->
   <meta http-equiv="cache-control" content="no-cache" />
   {{- end }}
-
-  <script src="https://cdn.jsdelivr.net/gh/gnat/css-scope-inline/script.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/gnat/surreal/surreal.js"></script>
-  <link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-  />
+  <link rel="stylesheet" href="/static/css/pico.min.css" />
+  <link rel="icon" type="img/png" href="/static/icon.png" />
+  <script src="/static/js/htmx.min.js"></script>
+  <script src="/static/js/htmx-config.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.11/dist/ext/sse.js"></script>
 </head>
 {{ end }}

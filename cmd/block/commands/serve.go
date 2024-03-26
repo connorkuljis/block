@@ -13,16 +13,22 @@ var ServeCmd = &cli.Command{
 	Usage: "Serves http server.",
 	Action: func(ctx *cli.Context) error {
 		s := server.NewServer("8080")
+
 		s.AppData = server.AppData{
 			Title:   "Block CLI",
 			DevMode: false, // load from env
 		}
-		s.Routes()
+
+		err := s.Routes()
+		if err != nil {
+			return err
+		}
 
 		log.Println("[ 💿 Spinning up server on http://localhost:" + s.Port + " ]")
 		if err := http.ListenAndServe(":"+s.Port, s.Router); err != nil {
 			return err
 		}
+
 		return nil
 	},
 }

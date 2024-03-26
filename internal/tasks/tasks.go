@@ -57,22 +57,49 @@ func InitDB() error {
 	return nil
 }
 
-func NewTask(inName string, inDuration float64, blockerEnabled bool, screenEnabled bool) Task {
-	return Task{
-		Name:              inName,
-		PlannedDuration:   inDuration,
+func NewTask(name string, duration float64, blockerEnabled bool, screenEnabled bool, createdAt time.Time) *Task {
+	return &Task{
+		Name:              name,
+		PlannedDuration:   duration,
 		ActualDuration:    sql.NullFloat64{Valid: false},
 		BlockerEnabled:    utils.BoolToInt(blockerEnabled),
 		ScreenEnabled:     utils.BoolToInt(screenEnabled),
 		ScreenURL:         sql.NullString{Valid: false},
-		CreatedAt:         time.Now(),
+		CreatedAt:         createdAt,
 		FinishedAt:        sql.NullTime{Valid: false},
 		Completed:         0,
 		CompletionPercent: sql.NullFloat64{Valid: false},
 	}
 }
 
-func InsertTask(task Task) Task {
+func (task *Task) SetCompletionPercent(completionPercent float64) {
+	if completionPercent == 100.0 {
+		task.Completed = 1
+	}
+
+	task.CompletionPercent = sql.NullFloat64{
+		Valid:   true,
+		Float64: completionPercent,
+	}
+}
+
+func (task *Task) SetFinishTime(finishedAt time.Time) {
+	task.FinishedAt = sql.NullTime{
+		Valid: true,
+		Time:  finishedAt,
+	}
+
+	// calulate the difference between the finish time and created at time
+	elapsedTime := finishedAt.Sub(task.CreatedAt)
+
+	// set the actual duration t
+	task.ActualDuration = sql.NullFloat64{
+		Valid:   true,
+		Float64: float64(elapsedTime),
+	}
+}
+
+func InsertTask(task *Task) {
 	insertQuery := `INSERT INTO Tasks (
 	name, 
 	planned_duration_minutes, 
@@ -103,8 +130,6 @@ func InsertTask(task Task) Task {
 	}
 
 	task.ID = lastInsertID
-
-	return task
 }
 
 func GetTaskByID(id int64) Task {
@@ -140,20 +165,10 @@ func GetAllCompletedTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-func UpdateFinishTimeAndDuration(task Task, inFinishedAt time.Time, inActuralDuration time.Duration) error {
-	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ? WHERE id = ?"
+func UpdateTaskAsFinished(task Task) error {
+	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ?, completion_percent = ?, completed = ? WHERE id = ?"
 
-	finishedAt := sql.NullTime{
-		Time:  inFinishedAt,
-		Valid: true,
-	}
-
-	actualDuration := sql.NullFloat64{
-		Float64: inActuralDuration.Minutes(),
-		Valid:   true,
-	}
-
-	result, err := db.Exec(query, finishedAt, actualDuration, task.ID)
+	result, err := db.Exec(query, task.FinishedAt, task.ActualDuration, task.CompletionPercent, task.Completed, task.ID)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"github.com/connorkuljis/block-cli/internal/app"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,21 +20,21 @@ var RootCmd = &cli.Command{
 		},
 	},
 	Action: func(ctx *cli.Context) error {
-		var app = app.App{}
-		err := app.Init(ctx)
-		if err != nil {
-			return err
-		}
+		// validate args length
+		// if ctx.NArg() < 1 {
+		// 	return errors.New("Error, no arguments provided")
+		// }
 
-		err = app.Start()
-		if err != nil {
-			return err
-		}
+		// durationArg := ctx.Args().Get(0)
+		// taskNameArg := ctx.Args().Get(1) // empty string is ok.
 
-		err = app.SaveAndExit()
-		if err != nil {
-			return err
-		}
+		// var durationFloat float64
+		// durationFloat, err := strconv.ParseFloat(durationArg, 64)
+		// if err != nil {
+		// 	return err
+		// }
+
+		// app.Start(os.Stdout, ndurationFloat, taskNameArg, true, false, false)
 
 		return nil
 	},

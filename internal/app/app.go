@@ -1,169 +1,54 @@
 package app
 
 import (
-	"errors"
-	"fmt"
+	"io"
 	"log"
-	"strconv"
+	"net/http"
 	"time"
 
 	"github.com/connorkuljis/block-cli/internal/interactive"
 	"github.com/connorkuljis/block-cli/internal/tasks"
 	"github.com/connorkuljis/block-cli/pkg/blocker"
-	"github.com/urfave/cli/v2"
 )
 
-type App struct {
-	hasBlocker        bool
-	hasScreenRecorder bool
-	hasDebug          bool
+func Start(w io.Writer, flusher http.Flusher, duration float64, taskname string, block bool, capture bool, debug bool) error {
+	// TODO: check duration for errors
 
-	startTime time.Time
-	endTime   time.Time
-
-	duration float64
-	taskName string
-
-	currentTask tasks.Task
-	blocker     blocker.Blocker
-}
-
-// Init contructs the app state from the cli context
-func (app *App) Init(ctx *cli.Context) error {
-	app.startTime = time.Now()
-
-	// validate args length
-	if ctx.NArg() < 1 {
-		return errors.New("Error, no arguments provided")
-	}
-
-	// parse args into duration and taskname
-	duration, taskName, err := parseArgs(ctx)
-	if err != nil {
-		return err
-	}
-
-	// set app options from flags
-	app.hasBlocker = true
-	if ctx.Bool("no-blocker") {
-		app.hasBlocker = false
-	}
-
-	app.hasScreenRecorder = ctx.Bool("capture")
-
-	if app.hasBlocker {
-		app.blocker = blocker.NewBlocker()
-	}
-
-	app.currentTask = tasks.NewTask(taskName, duration, app.hasBlocker, app.hasScreenRecorder)
-
-	return nil
-}
-
-// Init contructs the app state from the cli context
-func (app *App) InitServer(durationStr string, taskName string, block bool, capture bool) error {
-	app.startTime = time.Now()
-
-	duration, err := convertStringToFloat64(durationStr)
-	if err != nil {
-		return err
-	}
-
-	app.hasBlocker = block
-
-	app.hasScreenRecorder = capture
-
-	if app.hasBlocker {
-		app.blocker = blocker.NewBlocker()
-	}
-
-	app.currentTask = tasks.NewTask(taskName, duration, app.hasBlocker, app.hasScreenRecorder)
-
-	return nil
-}
-
-func (app *App) Start() error {
-	if app.hasBlocker {
-		log.Println("starting blocker and resetting dns")
-
-		err := app.blocker.Start()
+	b := blocker.NewBlocker()
+	if block {
+		err := b.Start()
 		if err != nil {
 			return err
 		}
+		log.Println("Blocker started.")
 
-		log.Println("successfully enabled blocker and reset dns")
 	}
 
-	app.currentTask = tasks.InsertTask(app.currentTask)
+	startTime := time.Now()
 
-	remote := interactive.NewRemote(app.currentTask, app.blocker)
-	remote.RunTasks(app.hasScreenRecorder)
+	currentTask := tasks.NewTask(taskname, duration, block, capture, startTime)
+	tasks.InsertTask(currentTask)
 
-	log.Println("Finished waiting on goroutines")
+	percent := interactive.RunTasks(w, flusher, currentTask, b)
+	log.Println("Percent: ", percent)
 
-	return nil
-}
+	currentTask.SetCompletionPercent(percent)
 
-func (app *App) SaveAndExit() error {
-	app.endTime = time.Now()
-	elapsedTime := app.endTime.Sub(app.startTime)
+	finishTime := time.Now()
+	currentTask.SetFinishTime(finishTime)
 
-	err := tasks.UpdateFinishTimeAndDuration(app.currentTask, app.endTime, elapsedTime)
+	err := tasks.UpdateTaskAsFinished(*currentTask)
 	if err != nil {
 		return err
 	}
 
-	log.Println("stopping blocker and reset dns")
-
-	if app.hasBlocker {
-		err = app.blocker.Stop()
+	if block {
+		err = b.Stop()
 		if err != nil {
 			return err
 		}
+		log.Println("Blocker stopped.")
 	}
 
-	log.Println("successfully stopped blocker and reset dns")
-
-	fmt.Println("Goodbye.")
 	return nil
-
-}
-
-func parseArgs(ctx *cli.Context) (float64, string, error) {
-	duration := 0.0
-	name := ""
-
-	var err error
-	if ctx.NArg() == 1 {
-		durationArg := ctx.Args().Get(0)
-
-		duration, err = convertStringToFloat64(durationArg)
-		if err != nil {
-			return duration, name, err
-		}
-	}
-
-	if ctx.NArg() >= 2 {
-		durationArg := ctx.Args().Get(0)
-		taskNameArg := ctx.Args().Get(1)
-
-		duration, err = convertStringToFloat64(durationArg)
-		if err != nil {
-			return duration, name, err
-		}
-		name = taskNameArg
-
-	}
-
-	return duration, name, nil
-}
-
-func convertStringToFloat64(str string) (float64, error) {
-	var floatVal float64
-	floatVal, err := strconv.ParseFloat(str, 64)
-	if err != nil {
-		return floatVal, err
-	}
-
-	return floatVal, nil
 }

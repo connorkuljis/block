@@ -13,7 +13,7 @@ import (
 // Server encapsulates all dependencies for the web Server.
 // HTTP handlers access information via receiver types.
 type Server struct {
-	FileSystem fs.FS // in-memory or disk
+	FileSystem embed.FS
 	Router     *http.ServeMux
 	Templates  Templates
 	AppData    AppData // global app data
@@ -24,12 +24,9 @@ type Server struct {
 }
 
 type Templates struct {
-	BaseLayout BaseLayout
 	Components Components
 	Views      Views
-}
 
-type BaseLayout struct {
 	Root   string
 	Head   string
 	Layout string
@@ -41,11 +38,11 @@ type Components struct {
 	Nav     string
 	Footer  string
 	Tasks   string
+	Morning string
 }
 
 type Views struct {
-	Index    string
-	Projects string
+	Index string
 }
 
 type AppData struct {
@@ -58,7 +55,7 @@ const (
 	TemplatesDirName = "www/templates"
 )
 
-//go:embed www/templates www/static
+//go:embed www/templates/* www/static/*
 var embedFS embed.FS
 
 // NewServer returns a new pointer Server struct.
@@ -66,55 +63,93 @@ var embedFS embed.FS
 // Server encapsulates all dependencies for the web Server.
 // HTTP handlers access information via receiver types.
 func NewServer(port string) *Server {
-	return &Server{
+	s := &Server{
 		FileSystem:   embedFS,
 		Router:       http.NewServeMux(),
 		Port:         port,
 		TemplatesDir: TemplatesDirName,
 		StaticDir:    StaticDirName,
-		Templates:    NewTemplates(TemplatesDirName),
+	}
+
+	s.Templates = LoadTemplatesFrom(s.FileSystem)
+
+	return s
+}
+
+// LoadTemplatesFrom returns a new Templates struct
+//
+// Templates encapulates all definitions of html files to load from the Server.
+func LoadTemplatesFrom(filesys fs.FS) Templates {
+	return Templates{
+		Head:   MustNewTemplateFile(filesys, "head.html"),
+		Layout: MustNewTemplateFile(filesys, "layout.html"),
+		Root:   MustNewTemplateFile(filesys, "root.html"),
+		Components: Components{
+			DevTool: MustNewComponentFile(filesys, "dev-tool.html"),
+			Header:  MustNewComponentFile(filesys, "header.html"),
+			Nav:     MustNewComponentFile(filesys, "nav.html"),
+			Footer:  MustNewComponentFile(filesys, "footer.html"),
+			Tasks:   MustNewComponentFile(filesys, "tasks.html"),
+			Morning: MustNewComponentFile(filesys, "morning.html"),
+		},
+		Views: Views{
+			Index: MustNewViewFile(filesys, "index.html"),
+		},
 	}
 }
 
-// NewTemplates returns a new Templates struct
-//
-// Templates encapulates all definitions of html files to load from the Server.
-func NewTemplates(dir string) Templates {
-	return Templates{
-		BaseLayout: BaseLayout{
-			Root:   filepath.Join(dir, "root.html"),
-			Head:   filepath.Join(dir, "head.html"),
-			Layout: filepath.Join(dir, "layout.html"),
-		},
-
-		Components: Components{
-			DevTool: filepath.Join(dir, "components", "dev-tool.html"),
-			Header:  filepath.Join(dir, "components", "header.html"),
-			Nav:     filepath.Join(dir, "components", "nav.html"),
-			Footer:  filepath.Join(dir, "components", "footer.html"),
-			Tasks:   filepath.Join(dir, "components", "tasks.html"),
-		},
-		Views: Views{
-			Index: filepath.Join(dir, "views", "index.html"),
-		},
+func CheckFileExists(filesystem fs.FS, target string) error {
+	_, err := filesystem.Open(target)
+	if err != nil {
+		return err
 	}
+	return nil
+}
+
+func MustNewTemplateFile(filesys fs.FS, filename string) string {
+	layoutFile := filepath.Join(TemplatesDirName, filename)
+	err := CheckFileExists(filesys, layoutFile)
+	if err != nil {
+		log.Fatal("New Layout File error: ", err)
+	}
+
+	return layoutFile
+}
+
+func MustNewComponentFile(filesys fs.FS, filename string) string {
+	layoutFile := filepath.Join(TemplatesDirName, "components", filename)
+	err := CheckFileExists(filesys, layoutFile)
+	if err != nil {
+		log.Fatal("New Component File error: ", err)
+	}
+
+	return layoutFile
+}
+
+func MustNewViewFile(filesys fs.FS, filename string) string {
+	layoutFile := filepath.Join(TemplatesDirName, "views", filename)
+	err := CheckFileExists(filesys, layoutFile)
+	if err != nil {
+		log.Fatal("New View File error: ", err)
+	}
+
+	return layoutFile
 }
 
 // getIndexTemplate parses joined base and index view templates.
 func IndexTemplate(s *Server) *template.Template {
-	view := []string{
-		s.Templates.BaseLayout.Head,
-		s.Templates.BaseLayout.Root,
-		s.Templates.BaseLayout.Layout,
+	return BuildTemplates(s, "index.html", nil,
+		s.Templates.Head,
+		s.Templates.Root,
+		s.Templates.Layout,
 		s.Templates.Components.DevTool,
 		s.Templates.Components.Header,
 		s.Templates.Components.Footer,
 		s.Templates.Components.Nav,
 		s.Templates.Components.Tasks,
+		s.Templates.Components.Morning,
 		s.Templates.Views.Index,
-	}
-
-	return BuildTemplates(s, "index.html", nil, view...)
+	)
 }
 
 // buildTemplates is a fast way to parse a collection of templates in the server filesystem.
@@ -130,7 +165,7 @@ func BuildTemplates(s *Server, name string, funcs template.FuncMap, templates ..
 	// generate a template from the files in the server fs (usually embedded)
 	tmpl, err := tmpl.ParseFS(s.FileSystem, templates...)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error building template: %s %s", name, err)
 	}
 
 	return tmpl

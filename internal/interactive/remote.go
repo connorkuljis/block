@@ -1,7 +1,9 @@
 package interactive
 
 import (
+	"io"
 	"log"
+	"net/http"
 	"sync"
 
 	"github.com/connorkuljis/block-cli/internal/tasks"
@@ -9,27 +11,31 @@ import (
 )
 
 type Remote struct {
-	Task    tasks.Task
+	Task    *tasks.Task
 	Blocker blocker.Blocker
+	W       io.Writer
+	Flusher http.Flusher
 
-	Wg     *sync.WaitGroup
-	Pause  chan bool
-	Cancel chan bool
-	Finish chan bool
+	Wg                *sync.WaitGroup
+	Pause             chan bool
+	Cancel            chan bool
+	Finish            chan bool
+	CompletionPercent chan float64
 }
 
-func NewRemote(task tasks.Task, blocker blocker.Blocker) Remote {
-	return Remote{
-		Task:    task,
-		Blocker: blocker,
-		Wg:      &sync.WaitGroup{},
-		Pause:   make(chan bool, 1),
-		Cancel:  make(chan bool, 1),
-		Finish:  make(chan bool, 1),
+func RunTasks(w io.Writer, flusher http.Flusher, task *tasks.Task, blocker blocker.Blocker) float64 {
+	remote := &Remote{
+		Task:              task,
+		Blocker:           blocker,
+		Wg:                &sync.WaitGroup{},
+		W:                 w,
+		Flusher:           flusher,
+		Pause:             make(chan bool, 1),
+		Cancel:            make(chan bool, 1),
+		Finish:            make(chan bool, 1),
+		CompletionPercent: make(chan float64, 1),
 	}
-}
 
-func (remote *Remote) RunTasks(withScreenRecorder bool) {
 	// run the configured goroutines
 	remote.Wg.Add(2)
 
@@ -39,7 +45,7 @@ func (remote *Remote) RunTasks(withScreenRecorder bool) {
 	log.Println("Polling input")
 	go PollInput(remote)
 
-	if withScreenRecorder {
+	if task.ScreenEnabled == 1 {
 		remote.Wg.Add(1)
 		log.Println("Starting screen recorder")
 		go FfmpegCaptureScreen(remote)
@@ -47,4 +53,6 @@ func (remote *Remote) RunTasks(withScreenRecorder bool) {
 
 	// wait for the goroutines to finish
 	remote.Wg.Wait()
+
+	return <-remote.CompletionPercent
 }

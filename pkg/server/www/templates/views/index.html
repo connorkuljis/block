@@ -1,6 +1,26 @@
 {{ define "view" }}
-<h2>Index</h2>
+<form action="/start" method="post">
+  <fieldset>
+    <label>
+      Task Name
+      <input type="text" name="taskname" />
+    </label>
+    <label>
+      Duration
+      <input type="number" name="duration" />
+    </label>
+    <label>
+      Blocker
+      <input type="checkbox" name="blocker" checked />
+    </label>
+    <label>
+      Capture
+      <input type="checkbox" name="capture" />
+    </label>
+  </fieldset>
+</form>
 <button hx-get="/start">start</button>
 <button>stop</button>
 
-{{ template "tasks" . }} {{ end }}
+<div hx-ext="sse" sse-connect="/start" sse-swap="message">connect</div>
+{{ template "morning" . }} {{ template "tasks" . }} {{ end }}
