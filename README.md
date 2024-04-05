@@ -90,7 +90,7 @@ ESC or 'q' to exit. Press any key to pause.
 # Troubleshooting Screen Recording with Ffmpeg
 If you have `ffmpeg` on you machine you can automatically capture your screen. 
 
-To record your screen use the `-x` flag.
+To record your screen use the `-c` flag.
 
 If you are having issues recording your screen, follow the checklist:
 
@@ -112,5 +112,3 @@ ffmpegRecordingsPath: /Volumes/WD_2TB/Screen-Recordings
 avfoundationDevice: "1:0"
 
 ```
-
-
