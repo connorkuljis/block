@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var RootCmd = &cli.Command{
+var StartCmd = &cli.Command{
 	Name:      "start",
 	Usage:     "start the blocker.",
 	Args:      true,
@@ -39,7 +39,11 @@ var RootCmd = &cli.Command{
 			return err
 		}
 
-		app.Start(os.Stdout, durationFloat, taskNameArg, true, false, false)
+		// TODO: I want to read the bool flag value of 'capture' and assign it to a variable
+		capture := ctx.Bool("capture")
+		blocker := !ctx.Bool("no-blocker")
+
+		app.Start(os.Stdout, durationFloat, taskNameArg, blocker, capture, true)
 
 		return nil
 	},

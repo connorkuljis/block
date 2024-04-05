@@ -27,7 +27,7 @@ func main() {
 		Name:  "block",
 		Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
 		Commands: []*cli.Command{
-			commands.RootCmd,
+			commands.StartCmd,
 			commands.HistoryCmd,
 			commands.DeleteTaskCmd,
 			commands.ServeCmd,
