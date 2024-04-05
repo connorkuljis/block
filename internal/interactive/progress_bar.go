@@ -1,7 +1,6 @@
 package interactive
 
 import (
-	"fmt"
 	"io"
 	"time"
 
@@ -17,7 +16,6 @@ func initProgressBar(max int, w io.Writer) *progressbar.ProgressBar {
 		progressbar.OptionShowElapsedTimeOnFinish(),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionShowIts(),
-		// progressbar.OptionSetWriter(w),
 	)
 }
 
@@ -33,6 +31,7 @@ func RenderProgressBar(remote *Remote) {
 	for {
 		select {
 		case <-remote.Cancel:
+			remote.TotalTimeSeconds <- i
 			remote.CompletionPercent <- pbar.State().CurrentPercent * 100
 			remote.Wg.Done()
 			return
@@ -40,6 +39,7 @@ func RenderProgressBar(remote *Remote) {
 			paused = !paused
 		case <-ticker.C:
 			if i == durationSeconds {
+				remote.TotalTimeSeconds <- i
 				remote.CompletionPercent <- pbar.State().CurrentPercent * 100
 				utils.SendNotification()
 				close(remote.Finish)
@@ -50,8 +50,6 @@ func RenderProgressBar(remote *Remote) {
 			if !paused {
 				pbar.Add(1)
 				i++
-				fmt.Fprintf(remote.W, "data: %d\n\n", i)
-				remote.Flusher.Flush()
 			}
 		}
 	}

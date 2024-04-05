@@ -83,20 +83,13 @@ func (task *Task) SetCompletionPercent(completionPercent float64) {
 	}
 }
 
-func (task *Task) SetFinishTime(finishedAt time.Time) {
-	task.FinishedAt = sql.NullTime{
-		Valid: true,
-		Time:  finishedAt,
-	}
+func (task *Task) UpdateFinishTime(finishedAt time.Time) {
+	task.FinishedAt = sql.NullTime{Time: finishedAt, Valid: true}
+}
 
-	// calulate the difference between the finish time and created at time
-	elapsedTime := finishedAt.Sub(task.CreatedAt)
-
-	// set the actual duration t
-	task.ActualDuration = sql.NullFloat64{
-		Valid:   true,
-		Float64: float64(elapsedTime),
-	}
+func (task *Task) UpdateActualDuration(durationSeconds int) {
+	durationMinutes := float64(durationSeconds) / 60
+	task.ActualDuration = sql.NullFloat64{Float64: durationMinutes, Valid: true}
 }
 
 func InsertTask(task *Task) {

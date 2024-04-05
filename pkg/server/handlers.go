@@ -62,11 +62,11 @@ func (s *Server) HandleStart() http.HandlerFunc {
 		// 	http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		// }
 
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
-			return
-		}
+		// flusher, ok := w.(http.Flusher)
+		// if !ok {
+		// 	http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		// 	return
+		// }
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
@@ -74,7 +74,7 @@ func (s *Server) HandleStart() http.HandlerFunc {
 
 		durationFloat := 0.1
 		name := "test"
-		err := app.Start(w, flusher, durationFloat, name, true, false, false)
+		err := app.Start(w, durationFloat, name, true, false, false)
 		if err != nil {
 			log.Print(err)
 		}
