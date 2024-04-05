@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -42,6 +43,9 @@ var StartCmd = &cli.Command{
 		// TODO: I want to read the bool flag value of 'capture' and assign it to a variable
 		capture := ctx.Bool("capture")
 		blocker := !ctx.Bool("no-blocker")
+
+		fmt.Println("## capture (bool):", capture)
+		fmt.Println("## blocker (bool):", blocker)
 
 		app.Start(os.Stdout, durationFloat, taskNameArg, blocker, capture, true)
 

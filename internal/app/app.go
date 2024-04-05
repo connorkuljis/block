@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -15,6 +16,7 @@ func Start(w io.Writer, duration float64, taskname string, block bool, capture b
 
 	b := blocker.NewBlocker()
 	if block {
+		fmt.Println("enabling blocker")
 		err := b.Start()
 		if err != nil {
 			return err
