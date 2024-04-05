@@ -1,0 +1,16 @@
+{{ define "head" }}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ .AppData.Title }}</title>
+  {{- if .AppData.DevMode -}}
+  <!-- Dev Mode Settings -->
+  <meta http-equiv="cache-control" content="no-cache" />
+  {{- end }}
+  <link rel="stylesheet" href="/static/css/pico.min.css" />
+  <link rel="icon" type="img/png" href="/static/icon.png" />
+  <script src="/static/js/htmx.min.js"></script>
+  <script src="/static/js/htmx-config.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.11/dist/ext/sse.js"></script>
+</head>
+{{ end }}

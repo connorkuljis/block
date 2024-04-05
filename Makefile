@@ -2,7 +2,7 @@ build:
 	go build -o . ./... 
 
 run: 
-	./block
+	./block serve
 
 clean:
 	rm ./block
@@ -13,5 +13,5 @@ install:
 all: build run
 
 dev:
-	reflex make 
+	reflex -s make all
 

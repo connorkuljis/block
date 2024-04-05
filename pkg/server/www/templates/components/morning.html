@@ -1,0 +1,10 @@
+{{ define "morning" }}
+<h3>Morning</h3>
+<p>Are you ready to reset the day?</p>
+<button hx-get="/greeting" hx-swap="outerHTML">Reset</button>
+{{ end }}
+
+<!-- -->
+{{ define "greeting" }}
+<p>You are starting a new day from scratch.</p>
+{{ end }}
