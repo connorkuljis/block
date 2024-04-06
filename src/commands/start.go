@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/connorkuljis/block-cli/internal/app"
+	"github.com/connorkuljis/block-cli/src/app"
 	"github.com/urfave/cli/v2"
 )
 

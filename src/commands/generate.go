@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/connorkuljis/block-cli/internal/interactive"
-	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/src/interactive"
+	"github.com/connorkuljis/block-cli/src/tasks"
 	"github.com/urfave/cli/v2"
 )
 

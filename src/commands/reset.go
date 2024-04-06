@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/connorkuljis/block-cli/pkg/blocker"
+	"github.com/connorkuljis/block-cli/src/blocker"
 	"github.com/urfave/cli"
 )
 

@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/internal/config"
-	"github.com/connorkuljis/block-cli/internal/utils"
+	"github.com/connorkuljis/block-cli/src/config"
+	"github.com/connorkuljis/block-cli/src/utils"
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )

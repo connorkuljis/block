@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/internal/interactive"
-	"github.com/connorkuljis/block-cli/internal/tasks"
-	"github.com/connorkuljis/block-cli/pkg/blocker"
+	"github.com/connorkuljis/block-cli/src/blocker"
+	"github.com/connorkuljis/block-cli/src/interactive"
+	"github.com/connorkuljis/block-cli/src/tasks"
 )
 
 func Start(w io.Writer, duration float64, taskname string, block bool, capture bool, debug bool) error {
