@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/connorkuljis/block-cli/pkg/server"
+	"github.com/connorkuljis/block-cli/src/server"
 	"github.com/urfave/cli/v2"
 )
 

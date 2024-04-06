@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/connorkuljis/block-cli/internal/app"
-	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/src/app"
+	"github.com/connorkuljis/block-cli/src/tasks"
 )
 
 // Routes instatiates http Handlers and associated patterns on the server.

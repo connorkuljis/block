@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/connorkuljis/block-cli/internal/utils"
+	"github.com/connorkuljis/block-cli/src/utils"
 	"github.com/schollz/progressbar/v3"
 )
 

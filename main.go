@@ -4,9 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/connorkuljis/block-cli/cmd/block/commands"
-	"github.com/connorkuljis/block-cli/internal/config"
-	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/src/commands"
+	"github.com/connorkuljis/block-cli/src/config"
+	"github.com/connorkuljis/block-cli/src/tasks"
 	"github.com/urfave/cli/v2"
 )
 
