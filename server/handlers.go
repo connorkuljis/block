@@ -27,6 +27,8 @@ func (s *Server) HandleIndex() http.HandlerFunc {
 		s.TemplateFragments.Base["head.html"],
 		s.TemplateFragments.Components["header.html"],
 		s.TemplateFragments.Components["footer.html"],
+		s.TemplateFragments.Components["nav.html"],
+		s.TemplateFragments.Components["tasks.html"],
 		s.TemplateFragments.Views["index.html"],
 	}...)
 

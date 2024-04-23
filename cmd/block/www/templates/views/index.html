@@ -22,5 +22,6 @@
 <button hx-get="/start">start</button>
 <button>stop</button>
 
-<div hx-ext="sse" sse-connect="/start" sse-swap="message">connect</div>
-{{ template "morning" . }} {{ template "tasks" . }} {{ end }}
+{{ template "tasks" . }}
+<!-- s -->
+{{ end }}

@@ -2,7 +2,7 @@ build:
 	go build -o . ./... 
 
 run: 
-	./block-cli serve
+	./block serve
 
 clean:
 	rm ./block
