@@ -12,7 +12,6 @@ import (
 )
 
 func Start(w io.Writer, duration float64, taskname string, block bool, capture bool, debug bool) error {
-	// TODO: check duration for errors
 
 	b := blocker.NewBlocker()
 	if block {
@@ -28,6 +27,7 @@ func Start(w io.Writer, duration float64, taskname string, block bool, capture b
 	startTime := time.Now()
 
 	currentTask := tasks.NewTask(taskname, duration, block, capture, startTime)
+
 	tasks.InsertTask(currentTask)
 
 	totalTimeSeconds, percent := interactive.RunTasks(w, currentTask, b)

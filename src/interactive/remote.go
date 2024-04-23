@@ -12,8 +12,8 @@ import (
 type Remote struct {
 	Task    *tasks.Task
 	Blocker blocker.Blocker
-	W       io.Writer
 
+	W                 io.Writer
 	Wg                *sync.WaitGroup
 	Pause             chan bool
 	Cancel            chan bool
@@ -35,7 +35,6 @@ func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker) (int, floa
 		TotalTimeSeconds:  make(chan int, 1),
 	}
 
-	// run the configured goroutines
 	remote.Wg.Add(2)
 
 	log.Println("Rendering progress bar")
@@ -50,12 +49,10 @@ func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker) (int, floa
 		go FfmpegCaptureScreen(remote)
 	}
 
-	// wait for the goroutines to finish
 	remote.Wg.Wait()
 
 	percent := <-remote.CompletionPercent
 	totalTimeSeconds := <-remote.TotalTimeSeconds
 
 	return totalTimeSeconds, percent
-
 }

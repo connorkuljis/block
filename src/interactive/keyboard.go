@@ -23,8 +23,8 @@ func PollInput(remote *Remote) {
 	}
 
 	paused := false
-	spinner := spinner.New(spinner.CharSets[39], 100*time.Millisecond)
-	spinner.Suffix = " Press any key to resume."
+	spinner := spinner.New(spinner.CharSets[40], 100*time.Millisecond)
+	spinner.Prefix = "Press any key to resume:"
 	for {
 		select {
 		case <-remote.Finish:
@@ -44,27 +44,32 @@ func PollInput(remote *Remote) {
 				remote.Wg.Done()
 				return
 			} else { // any other key press
-
 				paused = !paused
-
 				if paused {
-					err := remote.Blocker.Stop()
-					if err != nil {
-						log.Print(err)
-					}
-					fmt.Println("paused, unblocking sites")
-					remote.Pause <- true
-					spinner.Start()
+					unpause(remote, spinner)
 				} else {
-					spinner.Stop()
-					err := remote.Blocker.Start()
-					if err != nil {
-						log.Print(err)
-					}
-
-					remote.Pause <- true
+					pause(remote, spinner)
 				}
 			}
 		}
 	}
+}
+
+func unpause(remote *Remote, spinner *spinner.Spinner) {
+	err := remote.Blocker.Stop()
+	if err != nil {
+		log.Print(err)
+	}
+	fmt.Println("paused, unblocking sites")
+	remote.Pause <- true
+	spinner.Start()
+}
+
+func pause(remote *Remote, spinner *spinner.Spinner) {
+	spinner.Stop()
+	err := remote.Blocker.Start()
+	if err != nil {
+		log.Print(err)
+	}
+	remote.Pause <- true
 }
