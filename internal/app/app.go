@@ -2,16 +2,16 @@ package app
 
 import (
 	"fmt"
-	"github.com/connorkuljis/block-cli/internal/blocker"
 	"io"
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/interactive"
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/blocker"
+	"github.com/connorkuljis/block-cli/internal/interactive"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 )
 
-func Start(w io.Writer, duration float64, taskname string, block bool, capture bool, debug bool) error {
+func Start(w io.Writer, durationSeconds int64, taskname string, block bool, capture bool, debug bool) error {
 
 	b := blocker.NewBlocker()
 	if block {
@@ -26,7 +26,7 @@ func Start(w io.Writer, duration float64, taskname string, block bool, capture b
 
 	startTime := time.Now()
 
-	currentTask := tasks.NewTask(taskname, duration, block, capture, startTime)
+	currentTask := tasks.NewTask(taskname, durationSeconds, block, capture, startTime)
 
 	tasks.InsertTask(currentTask)
 
@@ -41,7 +41,7 @@ func Start(w io.Writer, duration float64, taskname string, block bool, capture b
 	log.Println("Finish Time (time):", currentTask.FinishedAt.Time)
 	log.Println("Completion Percent (%):", currentTask.CompletionPercent.Float64)
 	log.Println("Total Time (seconds):", totalTimeSeconds)
-	log.Println("Total Time (minutes):", currentTask.ActualDuration.Float64)
+	log.Println("Total Time (minutes):", currentTask.ActualDurationSeconds.Int64)
 
 	err := tasks.UpdateTaskAsFinished(*currentTask)
 	if err != nil {

@@ -4,18 +4,19 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"github.com/connorkuljis/block-cli/internal/app"
-	"github.com/connorkuljis/block-cli/internal/blocker"
-	"github.com/connorkuljis/block-cli/internal/config"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/connorkuljis/block-cli/interactive"
-	"github.com/connorkuljis/block-cli/server"
-	"github.com/connorkuljis/block-cli/tasks"
+	"github.com/connorkuljis/block-cli/internal/app"
+	"github.com/connorkuljis/block-cli/internal/blocker"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/interactive"
+	"github.com/connorkuljis/block-cli/internal/server"
+	"github.com/connorkuljis/block-cli/internal/tasks"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -216,14 +217,16 @@ var StartCmd = &cli.Command{
 			return errors.New("Error, no arguments provided")
 		}
 
-		durationArg := ctx.Args().Get(0)
-		taskNameArg := ctx.Args().Get(1) // empty string is ok.
+		argDurationMinutes := ctx.Args().Get(0)
+		argTaskName := ctx.Args().Get(1) // empty string is ok.
 
-		var durationFloat float64
-		durationFloat, err := strconv.ParseFloat(durationArg, 64)
+		var floatDurationMinutes float64
+		floatDurationMinutes, err := strconv.ParseFloat(argDurationMinutes, 64)
 		if err != nil {
 			return err
 		}
+
+		durationSeconds := int64(floatDurationMinutes * 60)
 
 		// TODO: I want to read the bool flag value of 'capture' and assign it to a variable
 		capture := ctx.Bool("capture")
@@ -232,7 +235,7 @@ var StartCmd = &cli.Command{
 		fmt.Println("## capture (bool):", capture)
 		fmt.Println("## blocker (bool):", blocker)
 
-		app.Start(os.Stdout, durationFloat, taskNameArg, blocker, capture, true)
+		app.Start(os.Stdout, durationSeconds, argTaskName, blocker, capture, true)
 
 		return nil
 	},
