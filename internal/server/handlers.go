@@ -1,8 +1,11 @@
 package server
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
+	"strconv"
+	"text/template"
 
 	"github.com/connorkuljis/block-cli/internal/tasks"
 )
@@ -21,19 +24,37 @@ func (s *Server) Routes() error {
 }
 
 func (s *Server) HandleIndex() http.HandlerFunc {
-	indexTemplate := s.BuildTemplates(
-		"index",
-		nil,
-		[]string{
-			s.TemplateFragments.Base["root.html"],
-			s.TemplateFragments.Base["layout.html"],
-			s.TemplateFragments.Base["head.html"],
-			s.TemplateFragments.Components["header.html"],
-			s.TemplateFragments.Components["footer.html"],
-			s.TemplateFragments.Components["nav.html"],
-			s.TemplateFragments.Components["tasks.html"],
-			s.TemplateFragments.Views["index.html"],
-		}...)
+	indexTemplateFragments := []string{
+		s.TemplateFragments.Base["root.html"],
+		s.TemplateFragments.Base["layout.html"],
+		s.TemplateFragments.Base["head.html"],
+		s.TemplateFragments.Components["header.html"],
+		s.TemplateFragments.Components["footer.html"],
+		s.TemplateFragments.Components["nav.html"],
+		s.TemplateFragments.Components["tasks.html"],
+		s.TemplateFragments.Views["index.html"],
+	}
+
+	funcMap := template.FuncMap{
+		"secsToMinSec": func(secs int64) string {
+			minutes := secs / 60
+			seconds := secs % 60
+
+			minutesStr := strconv.Itoa(int(minutes))
+			if minutes < 10 {
+				minutesStr = "0" + minutesStr
+			}
+			secondsStr := strconv.Itoa(int(seconds))
+			if seconds < 10 {
+				secondsStr = "0" + secondsStr
+			}
+
+			formattedString := fmt.Sprintf("%s:%s", minutesStr, secondsStr)
+			return formattedString
+		},
+	}
+
+	indexTemplate := s.BuildTemplates("index", funcMap, indexTemplateFragments...)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		tasks, err := tasks.GetAllTasks()

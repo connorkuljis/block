@@ -141,7 +141,7 @@ func GetTaskByID(id int64) Task {
 func GetAllTasks() ([]Task, error) {
 	var tasks []Task
 
-	rows, err := db.Queryx("SELECT * FROM Tasks")
+	rows, err := db.Queryx("SELECT * FROM Tasks ORDER BY created_at DESC")
 	if err != nil {
 		log.Fatal(err)
 	}
