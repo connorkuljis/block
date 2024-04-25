@@ -1,0 +1,87 @@
+{{ define "tasks-table" }}
+<div>
+  <canvas id="chart"></canvas>
+</div>
+<table id="tasks-table">
+  <thead>
+    <th>Task ID</th>
+    <th>Date</th>
+    <th>Task Name</th>
+    <th>time</th>
+    <th>Estimated Duration (seconds)</th>
+    <th>Actual Duration (seconds)</th>
+    <th>%</th>
+  </thead>
+  <tbody>
+    {{ range .Tasks }}
+    <tr class="task">
+      <td class="task_id">{{ .TaskId }}</td>
+      <td class="created_at">
+        {{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}
+      </td>
+      <td class="task_name">{{ .TaskName }}</td>
+      <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
+      <td>
+        {{ $minsec := secsToMinSec .EstimatedDurationSeconds }} {{ $minsec }}
+      </td>
+      <td>
+        {{ $minsec := secsToMinSec .ActualDurationSeconds.Int64 }} {{ $minsec }}
+      </td>
+      <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+<script>
+  var tasks = [];
+
+  document.querySelectorAll(".task").forEach((task) => {
+    const taskId = task.querySelector(".task_id").textContent;
+    const taskName = task.querySelector(".task_name").textContent;
+    const time = task.querySelector(".time").textContent;
+
+    tasks.push({
+      TaskId: taskId,
+      TaskName: taskName,
+      Time: parseInt(time),
+    });
+  });
+
+  tasks.reverse();
+  console.log(tasks);
+
+  var ctx = document.getElementById("chart").getContext("2d");
+  var chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: tasks.map((task) => task.TaskName),
+      datasets: [
+        {
+          label: "Time",
+          data: tasks.map((task) => task.Time),
+          backgroundColor: "rgba(255, 99, 132, 0.2)",
+          borderColor: "rgba(255, 99, 132, 1)",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        y: {
+          title: {
+            text: "Duration (seconds)",
+            display: true,
+          },
+          beginAtZero: true,
+        },
+        x: {
+          title: {
+            text: "Task Name",
+            display: true,
+          },
+        },
+      },
+    },
+  });
+</script>
+{{ end }}

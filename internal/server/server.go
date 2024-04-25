@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // Server encapsulates all dependencies for the web Server.
@@ -15,6 +17,7 @@ import (
 type Server struct {
 	FileSystem        fs.FS
 	MuxRouter         *http.ServeMux
+	Db                *sqlx.DB
 	TemplateFragments TemplateFragments
 
 	Port string
@@ -37,7 +40,7 @@ const (
 //
 // Server encapsulates all dependencies for the web Server.
 // HTTP handlers access information via receiver types.
-func NewServer(fileSystem fs.FS, port string) (*Server, error) {
+func NewServer(fileSystem fs.FS, db *sqlx.DB, port string) (*Server, error) {
 	templateFragments, err := ExtractTemplateFragmentsFromFilesystem(fileSystem)
 	if err != nil {
 		return nil, err
@@ -46,6 +49,7 @@ func NewServer(fileSystem fs.FS, port string) (*Server, error) {
 	s := &Server{
 		FileSystem:        fileSystem,
 		MuxRouter:         http.NewServeMux(),
+		Db:                db,
 		Port:              port,
 		TemplateFragments: templateFragments,
 	}

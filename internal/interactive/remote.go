@@ -7,11 +7,13 @@ import (
 
 	"github.com/connorkuljis/block-cli/internal/blocker"
 	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/jmoiron/sqlx"
 )
 
 type Remote struct {
 	Task    *tasks.Task
 	Blocker blocker.Blocker
+	Db      *sqlx.DB
 
 	W                 io.Writer
 	Wg                *sync.WaitGroup
@@ -22,10 +24,11 @@ type Remote struct {
 	TotalTimeSeconds  chan int
 }
 
-func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker) (int, float64) {
+func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker, db *sqlx.DB) (int, float64) {
 	remote := &Remote{
 		Task:              task,
 		Blocker:           blocker,
+		Db:                db,
 		Wg:                &sync.WaitGroup{},
 		W:                 w,
 		Pause:             make(chan bool, 1),

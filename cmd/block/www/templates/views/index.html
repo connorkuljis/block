@@ -1,1 +1,16 @@
-{{ define "view" }} {{ template "tasks" . }} {{ end }}
+{{ define "view" }}
+<h3>Tasks</h3>
+
+<form hx-post="/api/tasks" hx-target="#tasks_body">
+  <label for="start_date">Start Date:</label>
+  <input type="date" id="start_date" name="start_date" />
+
+  <label for="end_date">End Date:</label>
+  <input type="date" id="end_date" name="end_date" />
+
+  <input type="submit" value="Submit" />
+</form>
+
+<div id="tasks_body">{{ template "tasks-table" . }}</div>
+
+{{ end }}

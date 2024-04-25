@@ -126,7 +126,7 @@ func FfmpegCaptureScreen(remote *Remote) {
 
 	log.Print("Successfully captured screen recording at: " + recording)
 
-	if err = tasks.UpdateScreenURL(*remote.Task, recording); err != nil {
+	if err = tasks.UpdateScreenURL(remote.Db, *remote.Task, recording); err != nil {
 		log.Print(err)
 	}
 
