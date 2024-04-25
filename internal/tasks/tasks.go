@@ -29,6 +29,21 @@ type Task struct {
 
 var db *sqlx.DB
 
+var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
+    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_name TEXT NOT NULL,
+    estimated_duration_seconds INTEGER NOT NULL,
+    actual_duration_seconds INTEGER,
+    blocker_enabled INTEGER DEFAULT 0,
+    screen_enabled INTEGER DEFAULT 0,
+    screen_url TEXT,
+    created_at TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP,
+    completed INTEGER,
+    completion_percent REAL
+)
+`
+
 func InitDB() error {
 	var err error
 
@@ -37,7 +52,10 @@ func InitDB() error {
 		return err
 	}
 
-	//todo: load the schema
+	_, err = db.Exec(Schema)
+	if err != nil {
+		return fmt.Errorf("Error initalising db schema: %w", err)
+	}
 
 	return nil
 }
