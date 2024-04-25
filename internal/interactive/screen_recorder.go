@@ -13,17 +13,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/connorkuljis/block-cli/src/config"
-	"github.com/connorkuljis/block-cli/src/tasks"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/tasks"
+
 	"github.com/fatih/color"
 )
 
 const TimeFormat = "2006-01-02_15-04"
 
 func conventionalFilename(timestamp, name, filetype string) string {
-	separator := "_"
+	seperator := "_"
 	concatenator := "-"
-	return timestamp + separator + strings.ReplaceAll(name, " ", concatenator) + filetype
+	return timestamp + seperator + strings.ReplaceAll(name, " ", concatenator) + filetype
 }
 
 type FfmpegCommandOpts struct {
@@ -41,7 +42,7 @@ func FfmpegCaptureScreen(remote *Remote) {
 
 	recording := filepath.Join(config.GetFfmpegRecordingPath(), conventionalFilename(
 		time.Now().Format(TimeFormat),
-		remote.Task.Name,
+		remote.Task.TaskName,
 		".mkv",
 	))
 

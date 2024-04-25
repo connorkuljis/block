@@ -25,10 +25,10 @@ func RenderTable(tasks []Task) {
 
 	totalMinutes := 0.0
 	for _, task := range tasks {
-		id := fmt.Sprint(task.ID)
-		name := task.Name
-		planned := fmt.Sprintf("%.0f", task.PlannedDuration)
-		actual := fmt.Sprintf("%.0f", task.ActualDuration.Float64)
+		id := fmt.Sprint(task.TaskId)
+		name := task.TaskName
+		planned := fmt.Sprintf("%d", task.EstimatedDurationSeconds)
+		actual := fmt.Sprintf("%d", task.ActualDurationSeconds.Int64)
 		date := task.CreatedAt.Format("Mon Jan 02 15:04:05")
 
 		completionPercent := fmt.Sprintf("%.2f%%", task.CompletionPercent.Float64)
@@ -40,8 +40,8 @@ func RenderTable(tasks []Task) {
 
 		row := []string{id, date, name, planned, actual, completionPercent, completed}
 
-		if task.ActualDuration.Valid {
-			totalMinutes += task.ActualDuration.Float64
+		if task.ActualDurationSeconds.Valid {
+			totalMinutes += float64(task.ActualDurationSeconds.Int64)
 		}
 
 		table.Append(row)

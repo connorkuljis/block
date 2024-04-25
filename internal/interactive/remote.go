@@ -5,8 +5,8 @@ import (
 	"log"
 	"sync"
 
-	"github.com/connorkuljis/block-cli/src/blocker"
-	"github.com/connorkuljis/block-cli/src/tasks"
+	"github.com/connorkuljis/block-cli/internal/blocker"
+	"github.com/connorkuljis/block-cli/internal/tasks"
 )
 
 type Remote struct {

@@ -2,13 +2,13 @@ build:
 	go build -o . ./... 
 
 run: 
-	./block-cli serve
+	./block serve
 
 clean:
 	rm ./block
 
 install:
-	sudo cp ./block-cli /usr/local/bin/
+	sudo cp ./block /usr/local/bin/block
 
 all: build run
 

@@ -6,41 +6,43 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/src/config"
-	"github.com/connorkuljis/block-cli/src/utils"
+	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/utils"
+
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
 
 type Task struct {
-	ID                int64           `db:"id"`
-	Name              string          `db:"name"`
-	PlannedDuration   float64         `db:"planned_duration_minutes"`
-	ActualDuration    sql.NullFloat64 `db:"actual_duration_minutes"`
-	BlockerEnabled    int             `db:"blocker_enabled"`
-	ScreenEnabled     int             `db:"screen_enabled"`
-	ScreenURL         sql.NullString  `db:"screen_url"`
-	CreatedAt         time.Time       `db:"created_at"`
-	FinishedAt        sql.NullTime    `db:"finished_at"`
-	Completed         int             `db:"completed"`
-	CompletionPercent sql.NullFloat64 `db:"completion_percent"`
+	TaskId                   int64           `db:"task_id"`
+	TaskName                 string          `db:"task_name"`
+	EstimatedDurationSeconds int64           `db:"estimated_duration_seconds"`
+	ActualDurationSeconds    sql.NullInt64   `db:"actual_duration_seconds"`
+	BlockerEnabled           int             `db:"blocker_enabled"`
+	ScreenEnabled            int             `db:"screen_enabled"`
+	ScreenURL                sql.NullString  `db:"screen_url"`
+	CreatedAt                time.Time       `db:"created_at"`
+	FinishedAt               sql.NullTime    `db:"finished_at"`
+	Completed                int             `db:"completed"`
+	CompletionPercent        sql.NullFloat64 `db:"completion_percent"`
 }
 
+var db *sqlx.DB
+
 var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    planned_duration_minutes REAL NOT NULL,
-    actual_duration_minutes REAL,
-    blocker_enabled INTEGER NOT NULL,
-    screen_enabled INTEGER NOT NULL,
+    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_name TEXT NOT NULL,
+    estimated_duration_seconds INTEGER NOT NULL,
+    actual_duration_seconds INTEGER,
+    blocker_enabled INTEGER DEFAULT 0,
+    screen_enabled INTEGER DEFAULT 0,
     screen_url TEXT,
     created_at TIMESTAMP NOT NULL,
     finished_at TIMESTAMP,
     completed INTEGER,
     completion_percent REAL
-)`
-
-var db *sqlx.DB
+)
+`
 
 func InitDB() error {
 	var err error
@@ -52,23 +54,24 @@ func InitDB() error {
 
 	_, err = db.Exec(Schema)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error initalising db schema: %w", err)
 	}
+
 	return nil
 }
 
-func NewTask(name string, duration float64, blockerEnabled bool, screenEnabled bool, createdAt time.Time) *Task {
+func NewTask(taskName string, durationSeconds int64, blockerEnabled bool, screenEnabled bool, createdAt time.Time) *Task {
 	return &Task{
-		Name:              name,
-		PlannedDuration:   duration,
-		ActualDuration:    sql.NullFloat64{Valid: false},
-		BlockerEnabled:    utils.BoolToInt(blockerEnabled),
-		ScreenEnabled:     utils.BoolToInt(screenEnabled),
-		ScreenURL:         sql.NullString{Valid: false},
-		CreatedAt:         createdAt,
-		FinishedAt:        sql.NullTime{Valid: false},
-		Completed:         0,
-		CompletionPercent: sql.NullFloat64{Valid: false},
+		TaskName:                 taskName,
+		EstimatedDurationSeconds: durationSeconds,
+		ActualDurationSeconds:    sql.NullInt64{Valid: false},
+		BlockerEnabled:           utils.BoolToInt(blockerEnabled),
+		ScreenEnabled:            utils.BoolToInt(screenEnabled),
+		ScreenURL:                sql.NullString{Valid: false},
+		CreatedAt:                createdAt,
+		FinishedAt:               sql.NullTime{Valid: false},
+		Completed:                0,
+		CompletionPercent:        sql.NullFloat64{Valid: false},
 	}
 }
 
@@ -87,15 +90,14 @@ func (task *Task) UpdateFinishTime(finishedAt time.Time) {
 	task.FinishedAt = sql.NullTime{Time: finishedAt, Valid: true}
 }
 
-func (task *Task) UpdateActualDuration(durationSeconds int) {
-	durationMinutes := float64(durationSeconds) / 60
-	task.ActualDuration = sql.NullFloat64{Float64: durationMinutes, Valid: true}
+func (task *Task) UpdateActualDuration(actualDurationSeconds int) {
+	task.ActualDurationSeconds = sql.NullInt64{Int64: int64(actualDurationSeconds), Valid: true}
 }
 
 func InsertTask(task *Task) {
 	insertQuery := `INSERT INTO Tasks (
-	name, 
-	planned_duration_minutes, 
+	task_name, 
+	estimated_duration_seconds, 
 	blocker_enabled, 
 	screen_enabled, 
 	screen_url, 
@@ -103,8 +105,8 @@ func InsertTask(task *Task) {
 	completed, 
 	completion_percent) 
 	VALUES (
-	:name, 
-	:planned_duration_minutes, 
+	:task_name, 
+	:estimated_duration_seconds, 
 	:blocker_enabled, 
 	:screen_enabled, 
 	:screen_url, 
@@ -122,12 +124,12 @@ func InsertTask(task *Task) {
 		log.Fatal(err)
 	}
 
-	task.ID = lastInsertID
+	task.TaskId = lastInsertID
 }
 
 func GetTaskByID(id int64) Task {
 	var task Task
-	err := db.Get(&task, "SELECT * FROM Tasks WHERE id = ?", id)
+	err := db.Get(&task, "SELECT * FROM Tasks WHERE task_id = ?", id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -139,10 +141,24 @@ func GetTaskByID(id int64) Task {
 func GetAllTasks() ([]Task, error) {
 	var tasks []Task
 
-	err := db.Select(&tasks, "SELECT * FROM Tasks ORDER BY created_at ASC")
+	rows, err := db.Queryx("SELECT * FROM Tasks ORDER BY created_at DESC")
 	if err != nil {
-		return tasks, nil
+		log.Fatal(err)
 	}
+
+	for rows.Next() {
+		var t Task
+		err = rows.StructScan(&t)
+		if err != nil {
+			log.Fatal(err)
+		}
+		tasks = append(tasks, t)
+	}
+
+	// err := db.Select(&tasks, "SELECT * FROM Tasks")
+	// if err != nil {
+	// 	return tasks, nil
+	// }
 
 	return tasks, nil
 }
@@ -150,7 +166,7 @@ func GetAllTasks() ([]Task, error) {
 func GetAllCompletedTasks() ([]Task, error) {
 	var tasks []Task
 
-	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1 AND actual_duration_minutes > 5 ORDER BY created_at ASC")
+	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1 AND actual_duration_seconds > 5 ORDER BY created_at ASC")
 	if err != nil {
 		return tasks, nil
 	}
@@ -159,9 +175,9 @@ func GetAllCompletedTasks() ([]Task, error) {
 }
 
 func UpdateTaskAsFinished(task Task) error {
-	query := "UPDATE Tasks SET finished_at = ?, actual_duration_minutes = ?, completion_percent = ?, completed = ? WHERE id = ?"
+	query := "UPDATE Tasks SET finished_at = ?, actual_duration_seconds = ?, completion_percent = ?, completed = ? WHERE task_id = ?"
 
-	result, err := db.Exec(query, task.FinishedAt, task.ActualDuration, task.CompletionPercent, task.Completed, task.ID)
+	result, err := db.Exec(query, task.FinishedAt, task.ActualDurationSeconds, task.CompletionPercent, task.Completed, task.TaskId)
 	if err != nil {
 		return err
 	}
@@ -175,9 +191,9 @@ func UpdateTaskAsFinished(task Task) error {
 }
 
 func UpdateScreenURL(task Task, target string) error {
-	query := "UPDATE Tasks SET screen_url = ? WHERE id = ?"
+	query := "UPDATE Tasks SET screen_url = ? WHERE task_id = ?"
 
-	result, err := db.Exec(query, target, task.ID)
+	result, err := db.Exec(query, target, task.TaskId)
 	if err != nil {
 		return err
 	}
@@ -191,7 +207,7 @@ func UpdateScreenURL(task Task, target string) error {
 }
 
 func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
-	query := "UPDATE Tasks SET completion_percent = ?, completed = ? WHERE id = ?"
+	query := "UPDATE Tasks SET completion_percent = ?, completed = ? WHERE task_id = ?"
 
 	completionPercent := sql.NullFloat64{
 		Float64: inCompletionPercent,
@@ -208,7 +224,7 @@ func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 		completed = 1
 	}
 
-	result, err := db.Exec(query, completionPercent, completed, inTask.ID)
+	result, err := db.Exec(query, completionPercent, completed, inTask.TaskId)
 	if err != nil {
 		return err
 	}
@@ -222,7 +238,7 @@ func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 }
 
 func DeleteTaskByID(id string) (int64, error) {
-	query := "DELETE FROM Tasks WHERE id = ?"
+	query := "DELETE FROM Tasks WHERE task_id = ?"
 	var rowsAffected int64
 
 	result, err := db.Exec(query, id)

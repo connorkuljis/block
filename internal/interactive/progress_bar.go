@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/connorkuljis/block-cli/src/utils"
+	"github.com/connorkuljis/block-cli/internal/utils"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -20,8 +20,7 @@ func initProgressBar(max int, w io.Writer) *progressbar.ProgressBar {
 }
 
 func RenderProgressBar(remote *Remote) {
-	durationSeconds := int(remote.Task.PlannedDuration * 60) // convert minutes to seconds.
-
+	durationSeconds := int(remote.Task.EstimatedDurationSeconds)
 	pbar := initProgressBar(durationSeconds, remote.W)
 
 	ticker := time.NewTicker(time.Second * 1)

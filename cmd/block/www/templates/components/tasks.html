@@ -1,0 +1,29 @@
+{{ define "tasks" }}
+<h3>Tasks</h3>
+<table>
+  <thead>
+    <th>Task ID</th>
+    <th>Date</th>
+    <th>Task Name</th>
+    <th>Estimated Duration (seconds)</th>
+    <th>Actual Duration (seconds)</th>
+    <th>%</th>
+  </thead>
+  <tbody>
+    {{ range .Tasks }}
+    <tr>
+      <td>{{ .TaskId }}</td>
+      <td>{{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}</td>
+      <td>{{ .TaskName }}</td>
+      <td>
+        {{ $minsec := secsToMinSec .EstimatedDurationSeconds }} {{ $minsec }}
+      </td>
+      <td>
+        {{ $minsec := secsToMinSec .ActualDurationSeconds.Int64 }} {{ $minsec }}
+      </td>
+      <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}

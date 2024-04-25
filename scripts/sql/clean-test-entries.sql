@@ -2,7 +2,7 @@
 
 DELETE 
 FROM Tasks 
-WHERE name = 'test' 
-OR (name = '' AND actual_duration_minutes < 5);
+WHERE task_name = 'test' 
+OR (task_name = '' AND actual_duration_seconds < 100);
 
 SELECT changes();
