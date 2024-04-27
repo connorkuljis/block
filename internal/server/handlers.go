@@ -69,32 +69,65 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+
 			tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), daysBack)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			htmlBytes, err := SafeTmplExec(tasksTemplatePartial, "tasks-table", tasks)
+
+			taskCount := int64(len(tasks))
+			taskTotalSeconds := int64(0)
+			for i := range tasks {
+				taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+			}
+			taskAverageSeconds := taskTotalSeconds / taskCount
+
+			data := map[string]interface{}{"Tasks": tasks, "TaskCount": taskCount, "TaskTotalSeconds": taskTotalSeconds, "TaskAverageSeconds": taskAverageSeconds}
+
+			htmlBytes, err := SafeTmplExec(tasksTemplatePartial, "tasks-table", data)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+
 			SendHTML(w, htmlBytes)
 			return
 		}
 
-		tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), 30)
+		var daysBack int
+		strPastDays := r.URL.Query().Get("past")
+		if strPastDays == "" {
+			daysBack = 30
+		} else {
+			var err error
+			daysBack, err = strconv.Atoi(strPastDays)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+		tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), daysBack)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		htmlBytes, err := SafeTmplExec(tasksTemplate, "root", map[string]interface{}{
-			"Tasks": tasks,
-		})
+
+		taskCount := int64(len(tasks))
+		taskTotalSeconds := int64(0)
+		for i := range tasks {
+			taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+		}
+		taskAverageSeconds := taskTotalSeconds / taskCount
+
+		data := map[string]interface{}{"Tasks": tasks, "TaskCount": taskCount, "TaskTotalSeconds": taskTotalSeconds, "TaskAverageSeconds": taskAverageSeconds}
+
+		htmlBytes, err := SafeTmplExec(tasksTemplate, "root", data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		SendHTML(w, htmlBytes)
 		return
 	}
