@@ -1,49 +1,59 @@
 {{ define "tasks-table" }}
 <article>
-  <div class="grid">
-    <article>
-      <header><h4>Total Tasks</h4></header>
-      {{ .TaskCount }}
-    </article>
-    <article>
-      <header><h4>Average Time</h4></header>
-      {{ secsToMinSec .TaskAverageSeconds }}
-    </article>
-    <article>
-      <header><h4>Total Time</h4></header>
-      {{ secsToMinSec .TaskTotalSeconds }}
-    </article>
-  </div>
-  <div>
+  <header>
+    <div class="grid">
+      <article>
+        <header><h4>Total Tasks</h4></header>
+        {{ .TaskCount }}
+      </article>
+      <article>
+        <header><h4>Average Time</h4></header>
+        {{ secsToHHMMSS .TaskAverageSeconds }}
+      </article>
+      <article>
+        <header><h4>Total Time</h4></header>
+        {{ secsToHHMMSS .TaskTotalSeconds }}
+      </article>
+      <article>
+        <header><h4>Average Completion</h4></header>
+        {{ printf "%0.2f" .TaskAverageCompletionPercent }}%
+      </article>
+    </div>
+  </header>
+
+  <body>
     <canvas id="chart"></canvas>
-  </div>
+  </body>
+
+  <footer>
+    <table id="tasks-table">
+      <thead>
+        <th>Task ID</th>
+        <th>Date</th>
+        <th>Task Name</th>
+        <th>time</th>
+        <th>Estimated Duration</th>
+        <th>Actual Duration</th>
+        <th>%</th>
+      </thead>
+      <tbody>
+        {{ range .Tasks }}
+        <tr class="task">
+          <td class="task_id">{{ .TaskId }}</td>
+          <td class="created_at">
+            {{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}
+          </td>
+          <td class="task_name">{{ .TaskName }}</td>
+          <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
+          <td>{{ secsToHHMMSS .EstimatedDurationSeconds }}</td>
+          <td>{{ secsToHHMMSS .ActualDurationSeconds.Int64 }}</td>
+          <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </footer>
 </article>
-<table id="tasks-table">
-  <thead>
-    <th>Task ID</th>
-    <th>Date</th>
-    <th>Task Name</th>
-    <th>time</th>
-    <th>Estimated Duration (seconds)</th>
-    <th>Actual Duration (seconds)</th>
-    <th>%</th>
-  </thead>
-  <tbody>
-    {{ range .Tasks }}
-    <tr class="task">
-      <td class="task_id">{{ .TaskId }}</td>
-      <td class="created_at">
-        {{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}
-      </td>
-      <td class="task_name">{{ .TaskName }}</td>
-      <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
-      <td>{{ secsToMinSec .EstimatedDurationSeconds }}</td>
-      <td>{{ secsToMinSec .ActualDurationSeconds.Int64 }}</td>
-      <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
-    </tr>
-    {{ end }}
-  </tbody>
-</table>
 <script>
   var tasks = [];
 

@@ -26,20 +26,18 @@ func (s *Server) Routes() error {
 
 func (s *Server) HandleTasks() http.HandlerFunc {
 	funcMap := template.FuncMap{
-		"secsToMinSec": func(secs int64) string {
-			minutes := secs / 60
+		"secsToHHMMSS": func(secs int64) string {
+			hours := secs / 3600
+			minutes := (secs % 3600) / 60
 			seconds := secs % 60
 
-			minutesStr := strconv.Itoa(int(minutes))
-			if minutes < 10 {
-				minutesStr = "0" + minutesStr
-			}
-			secondsStr := strconv.Itoa(int(seconds))
-			if seconds < 10 {
-				secondsStr = "0" + secondsStr
+			var formattedString string
+			if hours > 0 {
+				formattedString = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			} else {
+				formattedString = fmt.Sprintf("%02d:%02d", minutes, seconds)
 			}
 
-			formattedString := fmt.Sprintf("%s:%s", minutesStr, secondsStr)
 			return formattedString
 		},
 	}
@@ -60,69 +58,31 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 	tasksTemplatePartial := s.BuildTemplates("tasks-partial", funcMap, s.TemplateFragments.Components["tasks-table.html"])
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		isHTMX := r.Header.Get("HX-Request") == "true"
-
-		if isHTMX {
-			strPastDays := r.URL.Query().Get("past")
-			daysBack, err := strconv.Atoi(strPastDays)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), daysBack)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			taskCount := int64(len(tasks))
-			taskTotalSeconds := int64(0)
-			for i := range tasks {
-				taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
-			}
-			taskAverageSeconds := taskTotalSeconds / taskCount
-
-			data := map[string]interface{}{"Tasks": tasks, "TaskCount": taskCount, "TaskTotalSeconds": taskTotalSeconds, "TaskAverageSeconds": taskAverageSeconds}
-
-			htmlBytes, err := SafeTmplExec(tasksTemplatePartial, "tasks-table", data)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			SendHTML(w, htmlBytes)
-			return
-		}
-
-		var daysBack int
-		strPastDays := r.URL.Query().Get("past")
-		if strPastDays == "" {
-			daysBack = 30
-		} else {
-			var err error
-			daysBack, err = strconv.Atoi(strPastDays)
-			if err != nil {
+		var daysBack = 30
+		if strPastDays := r.URL.Query().Get("past"); strPastDays != "" {
+			if parsedDays, err := strconv.Atoi(strPastDays); err == nil {
+				daysBack = parsedDays
+			} else {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
+
 		tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), daysBack)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		taskCount := int64(len(tasks))
-		taskTotalSeconds := int64(0)
-		for i := range tasks {
-			taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+		data := SummariseTasks(tasks)
+
+		var htmlBytes []byte
+		switch r.Header.Get("HX-Request") {
+		case "true":
+			htmlBytes, err = SafeTmplExec(tasksTemplatePartial, "tasks-table", data)
+		default:
+			htmlBytes, err = SafeTmplExec(tasksTemplate, "root", data)
 		}
-		taskAverageSeconds := taskTotalSeconds / taskCount
-
-		data := map[string]interface{}{"Tasks": tasks, "TaskCount": taskCount, "TaskTotalSeconds": taskTotalSeconds, "TaskAverageSeconds": taskAverageSeconds}
-
-		htmlBytes, err := SafeTmplExec(tasksTemplate, "root", data)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -131,4 +91,24 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 		SendHTML(w, htmlBytes)
 		return
 	}
+}
+
+func SummariseTasks(tasks []tasks.Task) map[string]any {
+	var taskCount int64
+	var taskTotalSeconds int64
+	var taskAverageSeconds int64
+	var taskTotalCompletionPercent float64
+	var taskAverageCompletionPercent float64
+
+	taskCount = int64(len(tasks))
+
+	for i := range tasks {
+		taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+		taskTotalCompletionPercent += tasks[i].CompletionPercent.Float64
+	}
+	taskAverageSeconds = taskTotalSeconds / taskCount
+	taskAverageCompletionPercent = float64(taskTotalCompletionPercent) / float64(taskCount)
+
+	data := map[string]interface{}{"Tasks": tasks, "TaskCount": taskCount, "TaskTotalSeconds": taskTotalSeconds, "TaskAverageSeconds": taskAverageSeconds, "TaskAverageCompletionPercent": taskAverageCompletionPercent}
+	return data
 }
