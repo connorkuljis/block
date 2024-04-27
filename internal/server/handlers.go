@@ -49,8 +49,8 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 		s.TemplateFragments.Components["header.html"],
 		s.TemplateFragments.Components["footer.html"],
 		s.TemplateFragments.Components["nav.html"],
+		s.TemplateFragments.Components["form-get-tasks.html"],
 		s.TemplateFragments.Components["tasks-table.html"],
-		s.TemplateFragments.Components["tasks-date-filter.html"],
 		s.TemplateFragments.Views["index.html"],
 	}
 

@@ -1,7 +1,7 @@
 {{ define "view" }}
 <h3>Tasks</h3>
 
-{{ template "tasks-date-filter" . }}
+{{ template "form-get-tasks" . }}
 
 <div id="tasks_body">{{ template "tasks-table" . }}</div>
 

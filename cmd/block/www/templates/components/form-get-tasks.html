@@ -1,4 +1,4 @@
-{{ define "tasks-date-filter" }}
+{{ define "form-get-tasks" }}
 <article>
   <form
     hx-get="/tasks"
@@ -8,6 +8,7 @@
   >
     <label for="dropdown">Select an option:</label>
     <select id="dropdown" name="past">
+      <option value="1">Today</option>
       <option value="7">Past 7 days</option>
       <option value="30" selected>Past 30 days</option>
       <option value="90">Past 90 days</option>
