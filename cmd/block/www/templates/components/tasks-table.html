@@ -13,7 +13,7 @@
     <th>%</th>
   </thead>
   <tbody>
-    {{ range .Tasks }}
+    {{ range . }}
     <tr class="task">
       <td class="task_id">{{ .TaskId }}</td>
       <td class="created_at">
@@ -47,7 +47,6 @@
     });
   });
 
-  tasks.reverse();
   console.log(tasks);
 
   var ctx = document.getElementById("chart").getContext("2d");

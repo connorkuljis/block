@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/connorkuljis/block-cli/internal/app"
 	"github.com/connorkuljis/block-cli/internal/blocker"
-	"github.com/connorkuljis/block-cli/internal/buckets"
 	"github.com/connorkuljis/block-cli/internal/config"
 	"github.com/connorkuljis/block-cli/internal/db"
 	"github.com/connorkuljis/block-cli/internal/interactive"
@@ -39,28 +39,28 @@ func main() {
 	}
 	log.Println("Loaded db.")
 
-	b, _ := buckets.GetBucketByName(db, "algorithms")
-	log.Print(b)
+	// b, _ := buckets.GetBucketByName(db, "algorithms")
+	// log.Print(b)
 
-	// app := &cli.App{
-	// 	Name:  "block",
-	// 	Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
-	// 	Before: func(c *cli.Context) error {
-	// 		c.Context = context.WithValue(c.Context, "db", db)
-	// 		return nil
-	// 	},
-	// 	Commands: []*cli.Command{
-	// 		StartCmd,
-	// 		HistoryCmd,
-	// 		DeleteTaskCmd,
-	// 		ServeCmd,
-	// 		GenerateCmd,
-	// 	},
-	// }
+	app := &cli.App{
+		Name:  "block",
+		Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
+		Before: func(c *cli.Context) error {
+			c.Context = context.WithValue(c.Context, "db", db)
+			return nil
+		},
+		Commands: []*cli.Command{
+			StartCmd,
+			HistoryCmd,
+			DeleteTaskCmd,
+			ServeCmd,
+			GenerateCmd,
+		},
+	}
 
-	// if err := app.Run(os.Args); err != nil {
-	// 	log.Fatal(err)
-	// }
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
 }
 
 var DeleteTaskCmd = &cli.Command{

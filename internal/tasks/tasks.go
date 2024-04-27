@@ -282,6 +282,21 @@ func GetTasksByDateRange(db *sqlx.DB, startDate, endDate time.Time) ([]Task, err
 	return tasks, nil
 }
 
+func GetRecentTasks(db *sqlx.DB, startDate time.Time, daysBack int) ([]Task, error) {
+	var tasks []Task
+
+	query := `SELECT * FROM Tasks WHERE created_at >= ?`
+
+	prevDate := startDate.AddDate(0, 0, -daysBack)
+
+	err := db.Select(&tasks, query, prevDate)
+	if err != nil {
+		return tasks, err
+	}
+
+	return tasks, nil
+}
+
 func GetCapturedTasksByDate(db *sqlx.DB, inDate time.Time) ([]Task, error) {
 	query := `SELECT * FROM Tasks 
 	WHERE DATE(created_at) = DATE(?)
