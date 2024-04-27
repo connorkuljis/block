@@ -39,9 +39,6 @@ func main() {
 	}
 	log.Println("Loaded db.")
 
-	// b, _ := buckets.GetBucketByName(db, "algorithms")
-	// log.Print(b)
-
 	app := &cli.App{
 		Name:  "block",
 		Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
@@ -228,6 +225,11 @@ var StartCmd = &cli.Command{
 			Aliases: []string{"c"},
 			Usage:   "Enables screen capture.",
 		},
+		&cli.Int64Flag{
+			Name:    "bucket",
+			Aliases: []string{"b"},
+			Usage:   "Tag a task with bucket id",
+		},
 	},
 	Action: func(ctx *cli.Context) error {
 		db := ctx.Context.Value("db").(*sqlx.DB)
@@ -247,14 +249,20 @@ var StartCmd = &cli.Command{
 
 		durationSeconds := int64(floatDurationMinutes * 60)
 
-		// TODO: I want to read the bool flag value of 'capture' and assign it to a variable
 		capture := ctx.Bool("capture")
 		blocker := !ctx.Bool("no-blocker")
+		bucketId := ctx.Int64("bucket")
 
-		fmt.Println("## capture (bool):", capture)
-		fmt.Println("## blocker (bool):", blocker)
+		currentTask := tasks.NewTask(argTaskName, durationSeconds, blocker, capture, time.Now())
 
-		app.Start(os.Stdout, db, durationSeconds, argTaskName, blocker, capture, true)
+		if bucketId != 0 {
+			currentTask.AddBucketTag(bucketId)
+		}
+
+		err = app.Start(os.Stdout, db, *currentTask)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		return nil
 	},

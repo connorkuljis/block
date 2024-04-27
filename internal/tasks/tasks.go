@@ -59,7 +59,12 @@ func NewTask(taskName string, durationSeconds int64, blockerEnabled bool, screen
 		FinishedAt:               sql.NullTime{Valid: false},
 		Completed:                0,
 		CompletionPercent:        sql.NullFloat64{Valid: false},
+		BucketId:                 sql.NullInt64{Valid: false},
 	}
+}
+
+func (task *Task) AddBucketTag(bucketId int64) {
+	task.BucketId = sql.NullInt64{Int64: bucketId, Valid: true}
 }
 
 func (task *Task) SetCompletionPercent(completionPercent float64) {
@@ -81,7 +86,7 @@ func (task *Task) UpdateActualDuration(actualDurationSeconds int) {
 	task.ActualDurationSeconds = sql.NullInt64{Int64: int64(actualDurationSeconds), Valid: true}
 }
 
-func InsertTask(db *sqlx.DB, task *Task) {
+func InsertTask(db *sqlx.DB, task *Task) error {
 	insertQuery := `INSERT INTO Tasks (
 	task_name, 
 	estimated_duration_seconds, 
@@ -90,7 +95,8 @@ func InsertTask(db *sqlx.DB, task *Task) {
 	screen_url, 
 	created_at, 
 	completed, 
-	completion_percent) 
+	completion_percent,
+	bucket_id) 
 	VALUES (
 	:task_name, 
 	:estimated_duration_seconds, 
@@ -99,19 +105,23 @@ func InsertTask(db *sqlx.DB, task *Task) {
 	:screen_url, 
 	:created_at, 
 	:completed, 
-	:completion_percent)`
+	:completion_percent,
+	:bucket_id)
+	`
 
 	result, err := db.NamedExec(insertQuery, task)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	task.TaskId = lastInsertID
+
+	return nil
 }
 
 func GetTaskByID(db *sqlx.DB, id int64) Task {
@@ -148,18 +158,9 @@ func GetAllTasks(db *sqlx.DB) ([]Task, error) {
 func GetTasksByBucketId(db *sqlx.DB, bucketId int64) ([]Task, error) {
 	var tasks []Task
 
-	rows, err := db.Queryx("SELECT * FROM Tasks WHERE bucket_id = ?")
+	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE bucket_id = ?", bucketId)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	for rows.Next() {
-		var t Task
-		err = rows.StructScan(&t)
-		if err != nil {
-			log.Fatal(err)
-		}
-		tasks = append(tasks, t)
 	}
 
 	return tasks, nil

@@ -18,6 +18,18 @@ type Bucket struct {
 	Tasks      []tasks.Task
 }
 
+func GetAllBuckets(db *sqlx.DB) ([]Bucket, error) {
+	var buckets []Bucket
+	q := `SELECT * FROM Buckets`
+
+	err := db.Select(&buckets, q)
+	if err != nil {
+		return buckets, err
+	}
+
+	return buckets, nil
+}
+
 func GetBucketByName(db *sqlx.DB, bucketName string) (Bucket, error) {
 	var bucket Bucket
 	q := `SELECT * FROM Buckets WHERE bucket_name = ?`

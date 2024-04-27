@@ -12,9 +12,9 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func Start(w io.Writer, db *sqlx.DB, durationSeconds int64, taskname string, block bool, capture bool, debug bool) error {
+func Start(w io.Writer, db *sqlx.DB, currentTask tasks.Task) error {
 	blocker := blocker.NewBlocker()
-	if block {
+	if currentTask.BlockerEnabled == 1 {
 		fmt.Println("enabling blocker")
 		err := blocker.Start()
 		if err != nil {
@@ -23,13 +23,12 @@ func Start(w io.Writer, db *sqlx.DB, durationSeconds int64, taskname string, blo
 		log.Println("Blocker started.")
 	}
 
-	startTime := time.Now()
+	err := tasks.InsertTask(db, &currentTask)
+	if err != nil {
+		return err
+	}
 
-	currentTask := tasks.NewTask(taskname, durationSeconds, block, capture, startTime)
-
-	tasks.InsertTask(db, currentTask)
-
-	totalTimeSeconds, percent := interactive.RunTasks(w, currentTask, blocker, db)
+	totalTimeSeconds, percent := interactive.RunTasks(w, &currentTask, blocker, db)
 
 	finishTime := time.Now()
 
@@ -42,12 +41,12 @@ func Start(w io.Writer, db *sqlx.DB, durationSeconds int64, taskname string, blo
 	log.Println("Total Time (seconds):", totalTimeSeconds)
 	log.Println("Total Time (minutes):", currentTask.ActualDurationSeconds.Int64)
 
-	err := tasks.UpdateTaskAsFinished(db, *currentTask)
+	err = tasks.UpdateTaskAsFinished(db, currentTask)
 	if err != nil {
 		return err
 	}
 
-	if block {
+	if currentTask.BlockerEnabled == 1 {
 		err = blocker.Stop()
 		if err != nil {
 			return err
