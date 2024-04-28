@@ -20,10 +20,18 @@ func (s *Server) Routes() error {
 	}
 
 	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(scfs))))
+	s.MuxRouter.HandleFunc("/", s.HandleHome())
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
 
 	return nil
+}
+
+func (s *Server) HandleHome() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/tasks", http.StatusSeeOther)
+		return
+	}
 }
 
 func (s *Server) HandleBuckets() http.HandlerFunc {
@@ -97,7 +105,7 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 	tasksPartial := s.BuildTemplates("tasks-partial", funcMap, taskPartialTemplateFragment)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var daysBack = 30
+		var daysBack = 7
 		if strPastDays := r.URL.Query().Get("past"); strPastDays != "" {
 			if parsedDays, err := strconv.Atoi(strPastDays); err == nil {
 				daysBack = parsedDays
@@ -113,7 +121,7 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 			return
 		}
 
-		parcel := SummariseTasks(tasks)
+		parcel := summariseTasks(tasks)
 
 		var htmlBytes []byte
 		switch r.Header.Get("HX-Request") {
@@ -136,7 +144,7 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 	}
 }
 
-func SummariseTasks(tasks []tasks.Task) map[string]any {
+func summariseTasks(tasks []tasks.Task) map[string]any {
 	var taskCount int64
 	var taskTotalSeconds int64
 	var taskAverageSeconds int64
