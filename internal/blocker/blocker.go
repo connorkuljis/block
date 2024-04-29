@@ -3,7 +3,7 @@ package blocker
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"log/slog"
 	"os"
 )
 
@@ -23,22 +23,22 @@ func NewBlocker() Blocker {
 	}
 }
 
-func (b *Blocker) Start() error {
+func (b *Blocker) Start() (int, error) {
 	shouldBlock := true
-	err := updateBlockList(b.hostsFile, shouldBlock)
+	n, err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {
-		return err
+		return n, err
 	}
-	return nil
+	return n, nil
 }
 
-func (b *Blocker) Stop() error {
+func (b *Blocker) Stop() (int, error) {
 	shouldBlock := false
-	err := updateBlockList(b.hostsFile, shouldBlock)
+	n, err := updateBlockList(b.hostsFile, shouldBlock)
 	if err != nil {
-		return err
+		return n, err
 	}
-	return nil
+	return n, nil
 }
 
 func addComment(line []byte) []byte {
@@ -60,11 +60,12 @@ func stripComment(line []byte) []byte {
 	return line
 }
 
-func updateBlockList(target string, shouldBlock bool) error {
+func updateBlockList(target string, shouldBlock bool) (int, error) {
 	// open the special hosts file, (requires root password)
+	var n int
 	file, err := os.Open(target)
 	if err != nil {
-		return err
+		return n, err
 	}
 	defer file.Close()
 
@@ -95,30 +96,31 @@ func updateBlockList(target string, shouldBlock bool) error {
 	}
 
 	if err = sc.Err(); err != nil {
-		return err
+		return n, err
 	}
 
-	fmt.Println(string(data))
+	slog.Debug(string(data))
 
-	err = overwriteFile(target, data)
+	n, err = overwriteFile(target, data)
 	if err != nil {
-		return err
+		return n, err
 	}
 
-	return nil
+	return n, nil
 }
 
 // takes a filename and overwrites it with data
-func overwriteFile(filename string, data []byte) error {
+func overwriteFile(filename string, data []byte) (int, error) {
+	var n int
 	file, err := os.Create(filename)
 	if err != nil {
-		return err
+		return n, err
 	}
 	defer file.Close()
 
-	_, err = file.Write(data)
+	n, err = file.Write(data)
 	if err != nil {
-		return err
+		return n, err
 	}
-	return nil
+	return n, nil
 }

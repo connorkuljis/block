@@ -115,7 +115,7 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 			}
 		}
 
-		tasks, err := tasks.GetRecentTasks(s.Db, time.Now(), daysBack)
+		tasks, err := tasks.GetRecentTasks(s.Db, time.Now().Truncate(24*time.Hour), daysBack)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

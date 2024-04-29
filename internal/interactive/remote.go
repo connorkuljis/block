@@ -1,8 +1,9 @@
 package interactive
 
 import (
+	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/connorkuljis/block-cli/internal/blocker"
@@ -24,7 +25,7 @@ type Remote struct {
 	TotalTimeSeconds  chan int
 }
 
-func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker, db *sqlx.DB) (int, float64) {
+func Run(w io.Writer, task *tasks.Task, blocker blocker.Blocker, db *sqlx.DB) (int, float64) {
 	remote := &Remote{
 		Task:              task,
 		Blocker:           blocker,
@@ -40,17 +41,21 @@ func RunTasks(w io.Writer, task *tasks.Task, blocker blocker.Blocker, db *sqlx.D
 
 	remote.Wg.Add(2)
 
-	log.Println("Rendering progress bar")
+	slog.Info("Rendering progress bar")
 	go RenderProgressBar(remote)
 
-	log.Println("Polling input")
+	slog.Info("Polling input")
 	go PollInput(remote)
 
 	if task.ScreenEnabled == 1 {
 		remote.Wg.Add(1)
-		log.Println("Starting screen recorder")
+		slog.Info("Capturing screen.")
 		go FfmpegCaptureScreen(remote)
 	}
+
+	fmt.Println("---")
+	fmt.Println("Press [q] or [esc] or [control-C] to quit.")
+	fmt.Println("Press [space] key to pause (re-enables sites temporarily).")
 
 	remote.Wg.Wait()
 

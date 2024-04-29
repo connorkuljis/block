@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/connorkuljis/block-cli/internal/interactive"
 	"github.com/connorkuljis/block-cli/internal/server"
 	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/internal/utils"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/urfave/cli/v2"
@@ -31,13 +33,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Loaded config.")
+	slog.Info("Loaded config.")
 
 	db, err := db.InitDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Loaded db.")
+	slog.Info("Loaded db.")
 
 	app := &cli.App{
 		Name:  "block",
@@ -52,6 +54,7 @@ func main() {
 			DeleteTaskCmd,
 			ServeCmd,
 			GenerateCmd,
+			ResetDNSCmd,
 		},
 	}
 
@@ -263,6 +266,17 @@ var StartCmd = &cli.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		var totalSecondsToday int64
+		today := currentTask.CreatedAt.Truncate(24 * time.Hour)
+		tasks, _ := tasks.GetRecentTasks(db, today, 0)
+		for _, task := range tasks {
+			totalSecondsToday += task.ActualDurationSeconds.Int64
+		}
+
+		fmt.Println("---")
+		fmt.Println("Total focus time today ==>", utils.SecsToHHMMSS(totalSecondsToday))
+		fmt.Println("Goodbye.")
 
 		return nil
 	},
