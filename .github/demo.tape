@@ -67,7 +67,7 @@ Set Shell "bash"
 Set FontSize 32
 
 # Type "block history today" Sleep 500ms  Enter
-Type "block start 0.1 'focus' -d" Sleep 500ms  Enter
+Type "block start 0.1 focus" Sleep 750ms  Enter
 
-Sleep 8s
+Sleep 10s
 
