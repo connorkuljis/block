@@ -1,33 +1,26 @@
-# block-cli
+# Block-cli
 
-**block** eliminates distractions and saves you time from the command line. 
+**Block** is a simple, cross-platform command line interface to eliminate digital distractions.
 
+The projects web site is (https://try-block.fly.dev/)[https://try-block.fly.dev/]
+
+Get the latest release at (https://github.com/connorkuljis/block/releases)[https://github.com/connorkuljis/block/releases]
+
+To checkout the code use `git clone https://github.com/connorkuljis/block-cli.git`
+ 
 ![demo](.github/demo.gif)
 
 # Mission
 
 Spend less time on the computer and more time in the sun.
 
-# Install
+# Building from source
 
-## Download latest binary release
-> To install the program, please read the instructions below:
+`make`, then run `make install` to install it.
 
-- [downloaded latest binary release tarball](https://github.com/connorkuljis/block/releases)
-- extract the binary from the tarball
-- add the binary to your system $PATH
+- note: ensure a Golang compiler is present on the machine.
 
-
-## Build from source
-** important! **
-- requires `go`, *you can install go here: [go.dev](https://go.dev/)*
-- requires `ffmpeg` 
-
-`git clone https://github.com/connorkuljis/block-cli.git && cd block-cli`
-
-`make`
-
-`make install`
+# Documentation
 
 ## Block Sites (Guide)
 
@@ -47,39 +40,7 @@ Spend less time on the computer and more time in the sun.
 # 0.0.0.0 www.old.reddit.com
 # 0.0.0.0 old.reddit.com
 # 0.0.0.0 www.facebook.com
-# ~ <-- lines below this character will be untouched by block-cli
-
-# Added by Docker Desktop
-192.168.0.13    host.docker.internal
-192.168.0.13    gateway.docker.internal
-# To allow the same kube context to work on the host and the container:
-127.0.0.1   kubernetes.docker.internal
-# End of section
-
-```
-
-- The program will uncomment the lines when you start the program, and add them back in when upon exit.
-- If you have content you dont want the program to manipulate, add the following line to the hosts file.
-
-
-Features:
-- 🙆 Pomodoro-like progress bar inidicator (right in your terminal!). 
-  - 🙅Automatically block/unblock any site at the IP level during the duration of the program.
-    - 📬 Alerted by a system notification when a session ends.
-- ⛳ Automatically record your progress.
-  - 📒 Answer 'what did I get done today' by running `block history`.
-- 󰑊 Capture your progress by enabling the screen recorder with `-x` or `--screen-recorder`.
-  - 🎥 Compile recordings into a time-lapse.
-- Cross-platform integration for `mac` and `linux` (`windows` soon).
-  - If you are having issues -> [https://github.com/connorkuljis/block-cli/issues](https://github.com/connorkuljis/block-cli/issues)
-- `YAML` file at `~/.config/block-cli/config.yaml`
-
-
-```
-❯ block start 10 'draft emails' -x
-Setting a timer for 10.0 minutes.
-ESC or 'q' to exit. Press any key to pause.
- 100% |███████████████████████████████████████████████████████████████████████████████████████████████| (90/90, 15 it/s) [5s]
+# ~ <-- important! lines below the (~) character mark the end of the blocklist
 ```
 
 # Usage
@@ -87,17 +48,10 @@ ESC or 'q' to exit. Press any key to pause.
 
 # Faq
 # Troubleshooting Screen Recording with Ffmpeg
-If you have `ffmpeg` on you machine you can automatically capture your screen. 
-
-To record your screen use the `-c` flag.
-
-If you are having issues recording your screen, follow the checklist:
-
+- run `ffmpeg -v` and ensure the installation is not corrupted or missing.
 - ensure system permissions are enabled to record your screen.
-- run `$ ffmpeg -v` to ensure your installation is not corrupted or missing.
 - a valid input device is configured in `config.yaml`
-- you have restarted your application 
-
+- restart the terminal application
 
 ## Configuration
 
