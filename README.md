@@ -85,7 +85,6 @@ ESC or 'q' to exit. Press any key to pause.
 # Usage
 - To see the list of commands available, run `block --help`
 
-
 # Faq
 # Troubleshooting Screen Recording with Ffmpeg
 If you have `ffmpeg` on you machine you can automatically capture your screen. 

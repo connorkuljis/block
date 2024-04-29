@@ -29,10 +29,15 @@ func conventionalFilename(timestamp, name, filetype string) string {
 
 type FfmpegCommandOpts struct {
 	InputFormat string
-	InputFile   string
-	OutputFile  string
+
+	InputDevice string
+
 	FrameRate   string
-	Vsync       string
+	PixelFormat string
+	Demuxer     string
+	VideoCodec  string
+
+	OutputFile string
 
 	Resolution string // linux only
 }
@@ -54,28 +59,32 @@ func FfmpegCaptureScreen(remote *Remote) {
 	recordingPath := config.GetFfmpegRecordingPath()
 	outputFile := filepath.Join(recordingPath, filename)
 
-	opts := FfmpegCommandOpts{
-		FrameRate:  "60",
-		OutputFile: outputFile,
-	}
-
 	switch runtime.GOOS {
 	case "darwin":
-		opts.InputFormat = "avfoundation"
-		opts.InputFile = config.GetAvfoundationDevice()
-		opts.Vsync = "2"
+		opts := FfmpegCommandOpts{
+			InputFormat: "avfoundation",
+			InputDevice: config.GetAvfoundationDevice(),
+			FrameRate:   "30",
+			// Demuxer:     "avfoundation",
+			PixelFormat: "yuv420p",
+			VideoCodec:  "libx264",
+			OutputFile:  outputFile,
+		}
 		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
-		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
+		cmdArgs = append(cmdArgs, "-i", opts.InputDevice)
 		cmdArgs = append(cmdArgs, "-r", opts.FrameRate)
-		// cmdArgs = append(cmdArgs, "-vsync", opts.Vsync)
+		cmdArgs = append(cmdArgs, "-pix_fmt", opts.PixelFormat)
+		cmdArgs = append(cmdArgs, "-c:v", opts.VideoCodec)
 		cmdArgs = append(cmdArgs, opts.OutputFile)
 	case "linux":
 		log.Println("Warning. Screen capture is experiemental on linux")
-		opts.InputFormat = "x11grab"
-		opts.InputFile = ":0,0"
-		opts.Resolution = "1920x1080"
+		opts := FfmpegCommandOpts{
+			InputFormat: "x11grab",
+			InputDevice: ":0,0",
+			Resolution:  "1920x1080",
+		}
 		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
-		cmdArgs = append(cmdArgs, "-i", opts.InputFile)
+		cmdArgs = append(cmdArgs, "-i", opts.InputDevice)
 		cmdArgs = append(cmdArgs, "-framerate", opts.FrameRate)
 		cmdArgs = append(cmdArgs, "-video_size", opts.Resolution)
 		cmdArgs = append(cmdArgs, opts.OutputFile)
