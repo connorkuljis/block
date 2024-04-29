@@ -2,9 +2,9 @@
 
 **Block** is a simple, cross-platform command line interface to eliminate digital distractions.
 
-The projects web site is (https://try-block.fly.dev/)[https://try-block.fly.dev/]
+The projects web site is [https://try-block.fly.dev/](https://try-block.fly.dev/)
 
-Get the latest release at (https://github.com/connorkuljis/block/releases)[https://github.com/connorkuljis/block/releases]
+Get the latest release at [https://github.com/connorkuljis/block/releases](https://github.com/connorkuljis/block/releases)
 
 To checkout the code use `git clone https://github.com/connorkuljis/block-cli.git`
  
