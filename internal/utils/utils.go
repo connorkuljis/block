@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/gen2brain/beeep"
@@ -26,4 +27,19 @@ func BoolToInt(cond bool) int {
 		v = 1
 	}
 	return v
+}
+
+func SecsToHHMMSS(secs int64) string {
+	hours := secs / 3600
+	minutes := (secs % 3600) / 60
+	seconds := secs % 60
+
+	var formattedString string
+	if hours > 0 {
+		formattedString = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	} else {
+		formattedString = fmt.Sprintf("%02d:%02d", minutes, seconds)
+	}
+
+	return formattedString
 }

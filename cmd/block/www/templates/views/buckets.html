@@ -1,0 +1,26 @@
+{{ define "view" }}
+<h3>Buckets</h3>
+<table>
+  <thead>
+    <th>Id</th>
+    <th>Name</th>
+  </thead>
+  <tbody>
+    {{ range .Buckets }}
+    <tr>
+      <td>{{ .BucketId }}</td>
+      <td>{{ .BucketName }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+
+<h4>Create Bucket</h4>
+<form>
+  <fieldset>
+    <label for="bucket_name">Bucket Name</label>
+    <input name="bucket_name" type="text" />
+    <input type="submit" value="Create Bucket" disabled />
+  </fieldset>
+</form>
+{{ end }}

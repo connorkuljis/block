@@ -1,8 +1,8 @@
 package interactive
 
 import (
-	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -40,10 +40,11 @@ func PollInput(remote *Remote) {
 					spinner.Stop()
 					close(remote.Pause)
 				}
+				slog.Info("Cancelling.")
 				close(remote.Cancel)
 				remote.Wg.Done()
 				return
-			} else { // any other key press
+			} else if event.Key == keyboard.KeySpace {
 				paused = !paused
 				if paused {
 					unpause(remote, spinner)
@@ -56,18 +57,17 @@ func PollInput(remote *Remote) {
 }
 
 func unpause(remote *Remote, spinner *spinner.Spinner) {
-	err := remote.Blocker.Stop()
+	_, err := remote.Blocker.Stop()
 	if err != nil {
 		log.Print(err)
 	}
-	fmt.Println("paused, unblocking sites")
 	remote.Pause <- true
 	spinner.Start()
 }
 
 func pause(remote *Remote, spinner *spinner.Spinner) {
 	spinner.Stop()
-	err := remote.Blocker.Start()
+	_, err := remote.Blocker.Start()
 	if err != nil {
 		log.Print(err)
 	}

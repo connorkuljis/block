@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strconv"
 	"text/template"
+	"time"
 
+	"github.com/connorkuljis/block-cli/internal/buckets"
 	"github.com/connorkuljis/block-cli/internal/tasks"
 )
 
@@ -18,57 +20,151 @@ func (s *Server) Routes() error {
 	}
 
 	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(scfs))))
-	s.MuxRouter.HandleFunc("/", s.HandleIndex())
+	s.MuxRouter.HandleFunc("/", s.HandleHome())
+	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
+	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
 
 	return nil
 }
 
-func (s *Server) HandleIndex() http.HandlerFunc {
-	indexTemplateFragments := []string{
+func (s *Server) HandleHome() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/tasks", http.StatusSeeOther)
+		return
+	}
+}
+
+func (s *Server) HandleBuckets() http.HandlerFunc {
+	bucketsTemplateFragments := []string{
 		s.TemplateFragments.Base["root.html"],
 		s.TemplateFragments.Base["layout.html"],
 		s.TemplateFragments.Base["head.html"],
 		s.TemplateFragments.Components["header.html"],
 		s.TemplateFragments.Components["footer.html"],
 		s.TemplateFragments.Components["nav.html"],
-		s.TemplateFragments.Components["tasks.html"],
-		s.TemplateFragments.Views["index.html"],
+		s.TemplateFragments.Views["buckets.html"],
 	}
 
+	bucketsTemplate := s.BuildTemplates("index", nil, bucketsTemplateFragments...)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		buckets, err := buckets.GetAllBuckets(s.Db)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		parcel := map[string]any{"Buckets": buckets}
+
+		htmlBytes, err := SafeTmplExec(bucketsTemplate, "root", parcel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+
+		}
+
+		SendHTML(w, htmlBytes)
+		return
+	}
+}
+
+func (s *Server) HandleTasks() http.HandlerFunc {
 	funcMap := template.FuncMap{
-		"secsToMinSec": func(secs int64) string {
-			minutes := secs / 60
+		"secsToHHMMSS": func(secs int64) string {
+			hours := secs / 3600
+			minutes := (secs % 3600) / 60
 			seconds := secs % 60
 
-			minutesStr := strconv.Itoa(int(minutes))
-			if minutes < 10 {
-				minutesStr = "0" + minutesStr
-			}
-			secondsStr := strconv.Itoa(int(seconds))
-			if seconds < 10 {
-				secondsStr = "0" + secondsStr
+			var formattedString string
+			if hours > 0 {
+				formattedString = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+			} else {
+				formattedString = fmt.Sprintf("%02d:%02d", minutes, seconds)
 			}
 
-			formattedString := fmt.Sprintf("%s:%s", minutesStr, secondsStr)
 			return formattedString
 		},
 	}
 
-	indexTemplate := s.BuildTemplates("index", funcMap, indexTemplateFragments...)
+	tasksPageTemplateFragments := []string{
+		s.TemplateFragments.Base["root.html"],
+		s.TemplateFragments.Base["layout.html"],
+		s.TemplateFragments.Base["head.html"],
+		s.TemplateFragments.Components["header.html"],
+		s.TemplateFragments.Components["footer.html"],
+		s.TemplateFragments.Components["nav.html"],
+		s.TemplateFragments.Components["form-get-tasks.html"],
+		s.TemplateFragments.Components["tasks-table.html"],
+		s.TemplateFragments.Views["index.html"],
+	}
+
+	taskPartialTemplateFragment := s.TemplateFragments.Components["tasks-table.html"]
+
+	tasksPage := s.BuildTemplates("tasks-page", funcMap, tasksPageTemplateFragments...)
+
+	tasksPartial := s.BuildTemplates("tasks-partial", funcMap, taskPartialTemplateFragment)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		tasks, err := tasks.GetAllTasks()
+		var daysBack = 7
+		if strPastDays := r.URL.Query().Get("past"); strPastDays != "" {
+			if parsedDays, err := strconv.Atoi(strPastDays); err == nil {
+				daysBack = parsedDays
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+
+		tasks, err := tasks.GetRecentTasks(s.Db, time.Now().Truncate(24*time.Hour), daysBack)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		htmlBytes, err := SafeTmplExec(indexTemplate, "root", map[string]interface{}{
-			"Tasks": tasks,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+
+		parcel := summariseTasks(tasks)
+
+		var htmlBytes []byte
+		switch r.Header.Get("HX-Request") {
+		case "true":
+			htmlBytes, err = SafeTmplExec(tasksPartial, "tasks-table", parcel)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		default:
+			htmlBytes, err = SafeTmplExec(tasksPage, "root", parcel)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
+
 		SendHTML(w, htmlBytes)
+		return
+	}
+}
+
+func summariseTasks(tasks []tasks.Task) map[string]any {
+	var taskCount int64
+	var taskTotalSeconds int64
+	var taskAverageSeconds int64
+	var taskTotalCompletionPercent float64
+	var taskAverageCompletionPercent float64
+
+	taskCount = int64(len(tasks))
+
+	for i := range tasks {
+		taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+		taskTotalCompletionPercent += tasks[i].CompletionPercent.Float64
+	}
+	taskAverageSeconds = taskTotalSeconds / taskCount
+	taskAverageCompletionPercent = float64(taskTotalCompletionPercent) / float64(taskCount)
+
+	return map[string]any{
+		"Tasks":                        tasks,
+		"TaskCount":                    taskCount,
+		"TaskTotalSeconds":             taskTotalSeconds,
+		"TaskAverageSeconds":           taskAverageSeconds,
+		"TaskAverageCompletionPercent": taskAverageCompletionPercent,
 	}
 }

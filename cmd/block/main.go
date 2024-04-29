@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -13,9 +15,12 @@ import (
 	"github.com/connorkuljis/block-cli/internal/app"
 	"github.com/connorkuljis/block-cli/internal/blocker"
 	"github.com/connorkuljis/block-cli/internal/config"
+	"github.com/connorkuljis/block-cli/internal/db"
 	"github.com/connorkuljis/block-cli/internal/interactive"
 	"github.com/connorkuljis/block-cli/internal/server"
 	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/internal/utils"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/urfave/cli/v2"
 )
@@ -28,23 +33,28 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Loaded config.")
+	slog.Info("Loaded config.")
 
-	err = tasks.InitDB()
+	db, err := db.InitDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Loaded db.")
+	slog.Info("Loaded db.")
 
 	app := &cli.App{
 		Name:  "block",
 		Usage: "block-cli blocks distractions from the command line. track tasks and capture your screen.",
+		Before: func(c *cli.Context) error {
+			c.Context = context.WithValue(c.Context, "db", db)
+			return nil
+		},
 		Commands: []*cli.Command{
 			StartCmd,
 			HistoryCmd,
 			DeleteTaskCmd,
 			ServeCmd,
 			GenerateCmd,
+			ResetDNSCmd,
 		},
 	}
 
@@ -57,12 +67,14 @@ var DeleteTaskCmd = &cli.Command{
 	Name:  "delete",
 	Usage: "Deletes a task by given ID.",
 	Action: func(ctx *cli.Context) error {
+		db := ctx.Context.Value("db").(*sqlx.DB)
+
 		if ctx.NArg() < 1 {
 			return errors.New("Empty arguments")
 		}
 
 		id := ctx.Args().Get(0)
-		rowsAffected, err := tasks.DeleteTaskByID(id)
+		rowsAffected, err := tasks.DeleteTaskByID(db, id)
 		if err != nil {
 			return err
 		}
@@ -81,6 +93,8 @@ var GenerateCmd = &cli.Command{
 	Name:  "generate",
 	Usage: "Concatenate capture recording files into a seperate file.",
 	Action: func(ctx *cli.Context) error {
+		db := ctx.Context.Value("db").(*sqlx.DB)
+
 		if ctx.NArg() < 1 {
 			log.Fatal("Invalid arguments, expected either 'today' or [timestamp] in yyyy-mm-dd")
 		}
@@ -97,7 +111,7 @@ var GenerateCmd = &cli.Command{
 			}
 		}
 
-		tasks, err := tasks.GetCapturedTasksByDate(t)
+		tasks, err := tasks.GetCapturedTasksByDate(db, t)
 		if err != nil {
 			return err
 		}
@@ -125,11 +139,13 @@ var HistoryCmd = &cli.Command{
 	Name:  "history",
 	Usage: "display task history.",
 	Action: func(ctx *cli.Context) error {
+		db := ctx.Context.Value("db").(*sqlx.DB)
+
 		var all []tasks.Task
 
 		if ctx.NArg() == 0 {
 			var err error
-			all, err = tasks.GetAllTasks()
+			all, err = tasks.GetAllTasks(db)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -139,7 +155,7 @@ var HistoryCmd = &cli.Command{
 			switch strings.ToLower(ctx.Args().Get(0)) {
 			case "today":
 				var err error
-				all, err = tasks.GetTasksByDate(time.Now())
+				all, err = tasks.GetTasksByDate(db, time.Now())
 				if err != nil {
 					return err
 				}
@@ -149,7 +165,7 @@ var HistoryCmd = &cli.Command{
 					log.Fatal("Error parsing date: " + ctx.Args().Get(0))
 				}
 
-				all, err = tasks.GetTasksByDate(inDate)
+				all, err = tasks.GetTasksByDate(db, inDate)
 				if err != nil {
 					return err
 				}
@@ -179,7 +195,9 @@ var ServeCmd = &cli.Command{
 	Name:  "serve",
 	Usage: "Serves http server.",
 	Action: func(ctx *cli.Context) error {
-		s, err := server.NewServer(embedWebContent, "8080")
+		db := ctx.Context.Value("db").(*sqlx.DB)
+
+		s, err := server.NewServer(embedWebContent, db, "8080")
 
 		err = s.Routes()
 		if err != nil {
@@ -210,8 +228,14 @@ var StartCmd = &cli.Command{
 			Aliases: []string{"c"},
 			Usage:   "Enables screen capture.",
 		},
+		&cli.Int64Flag{
+			Name:    "bucket",
+			Aliases: []string{"b"},
+			Usage:   "Tag a task with bucket id",
+		},
 	},
 	Action: func(ctx *cli.Context) error {
+		db := ctx.Context.Value("db").(*sqlx.DB)
 		// validate args length
 		if ctx.NArg() < 1 {
 			return errors.New("Error, no arguments provided")
@@ -228,89 +252,32 @@ var StartCmd = &cli.Command{
 
 		durationSeconds := int64(floatDurationMinutes * 60)
 
-		// TODO: I want to read the bool flag value of 'capture' and assign it to a variable
 		capture := ctx.Bool("capture")
 		blocker := !ctx.Bool("no-blocker")
+		bucketId := ctx.Int64("bucket")
 
-		fmt.Println("## capture (bool):", capture)
-		fmt.Println("## blocker (bool):", blocker)
+		currentTask := tasks.NewTask(argTaskName, durationSeconds, blocker, capture, time.Now())
 
-		app.Start(os.Stdout, durationSeconds, argTaskName, blocker, capture, true)
+		if bucketId != 0 {
+			currentTask.AddBucketTag(bucketId)
+		}
+
+		err = app.Start(os.Stdout, db, *currentTask)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var totalSecondsToday int64
+		today := currentTask.CreatedAt.Truncate(24 * time.Hour)
+		tasks, _ := tasks.GetRecentTasks(db, today, 0)
+		for _, task := range tasks {
+			totalSecondsToday += task.ActualDurationSeconds.Int64
+		}
+
+		fmt.Println("---")
+		fmt.Println("Total focus time today ==>", utils.SecsToHHMMSS(totalSecondsToday))
+		fmt.Println("Goodbye.")
 
 		return nil
 	},
 }
-
-// var timerCmd = &cobra.Command{
-// 	Use: "timer",
-// 	Run: func(cmd *cobra.Command, args []string) {
-// 		fmt.Println("timer")
-// 		// no args
-// 		createdAt := time.Now()
-
-// 		currentTask := tasks.InsertTask(tasks.NewTask("test", -1, true, false))
-
-// 		timer(currentTask)
-
-// 		finishedAt := time.Now()
-// 		actualDuration := finishedAt.Sub(createdAt)
-
-// 		tasks.UpdateCompletionPercent(currentTask, -1)
-
-// 		// persist calculations
-// 		if err := tasks.UpdateFinishTimeAndDuration(currentTask, finishedAt, actualDuration); err != nil {
-// 			log.Fatal(err)
-// 		}
-// 	},
-// }
-
-// func timer(currentTask tasks.Task) {
-// 	blocker := blocker.NewHostsBlocker()
-// 	err := blocker.Start()
-// 	if err != nil {
-// 		log.Println(err)
-// 	}
-// 	// initialise remote
-// 	r := interactive.Remote{
-// 		Task:    currentTask,
-// 		Blocker: blocker,
-// 		Wg:      &sync.WaitGroup{},
-// 		Pause:   make(chan bool, 1),
-// 		Cancel:  make(chan bool, 1),
-// 		Finish:  make(chan bool, 1),
-// 	}
-
-// 	r.Wg.Add(2)
-// 	go interactive.PollInput(r)
-// 	go incrementer(r)
-// 	r.Wg.Wait()
-
-// 	err = blocker.Stop()
-// 	if err != nil {
-// 		log.Println(err)
-// 	}
-// }
-
-// func incrementer(r interactive.Remote) {
-// 	ticker := time.NewTicker(time.Second * 1)
-
-// 	i := 0
-// 	paused := false
-// 	for {
-// 		select {
-// 		case <-r.Finish:
-// 			r.Wg.Done()
-// 			return
-// 		case <-r.Cancel:
-// 			r.Wg.Done()
-// 			return
-// 		case <-r.Pause:
-// 			paused = !paused
-// 		case <-ticker.C:
-// 			if !paused {
-// 				fmt.Printf("%d seconds\n", i)
-// 				i++
-// 			}
-// 		}
-// 	}
-// }

@@ -6,10 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/connorkuljis/block-cli/internal/config"
 	"github.com/connorkuljis/block-cli/internal/utils"
-
 	"github.com/jmoiron/sqlx"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -25,11 +24,12 @@ type Task struct {
 	FinishedAt               sql.NullTime    `db:"finished_at"`
 	Completed                int             `db:"completed"`
 	CompletionPercent        sql.NullFloat64 `db:"completion_percent"`
+	Status                   sql.NullString  `db:"status"`
+	BucketId                 sql.NullInt64   `db:"bucket_id"`
 }
 
-var db *sqlx.DB
-
-var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
+var TasksSchema = `
+	CREATE TABLE IF NOT EXISTS Tasks(
     task_id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_name TEXT NOT NULL,
     estimated_duration_seconds INTEGER NOT NULL,
@@ -40,25 +40,12 @@ var Schema = `CREATE TABLE IF NOT EXISTS Tasks(
     created_at TIMESTAMP NOT NULL,
     finished_at TIMESTAMP,
     completed INTEGER,
-    completion_percent REAL
-)
+    completion_percent REAL,
+    status TEXT,
+    bucket_id INTEGER,
+    FOREIGN KEY (bucket_id) REFERENCES Buckets(bucket_id)
+	);
 `
-
-func InitDB() error {
-	var err error
-
-	db, err = sqlx.Connect("sqlite", config.GetDBPath())
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(Schema)
-	if err != nil {
-		return fmt.Errorf("Error initalising db schema: %w", err)
-	}
-
-	return nil
-}
 
 func NewTask(taskName string, durationSeconds int64, blockerEnabled bool, screenEnabled bool, createdAt time.Time) *Task {
 	return &Task{
@@ -72,7 +59,12 @@ func NewTask(taskName string, durationSeconds int64, blockerEnabled bool, screen
 		FinishedAt:               sql.NullTime{Valid: false},
 		Completed:                0,
 		CompletionPercent:        sql.NullFloat64{Valid: false},
+		BucketId:                 sql.NullInt64{Valid: false},
 	}
+}
+
+func (task *Task) AddBucketTag(bucketId int64) {
+	task.BucketId = sql.NullInt64{Int64: bucketId, Valid: true}
 }
 
 func (task *Task) SetCompletionPercent(completionPercent float64) {
@@ -94,7 +86,7 @@ func (task *Task) UpdateActualDuration(actualDurationSeconds int) {
 	task.ActualDurationSeconds = sql.NullInt64{Int64: int64(actualDurationSeconds), Valid: true}
 }
 
-func InsertTask(task *Task) {
+func InsertTask(db *sqlx.DB, task *Task) error {
 	insertQuery := `INSERT INTO Tasks (
 	task_name, 
 	estimated_duration_seconds, 
@@ -103,7 +95,8 @@ func InsertTask(task *Task) {
 	screen_url, 
 	created_at, 
 	completed, 
-	completion_percent) 
+	completion_percent,
+	bucket_id) 
 	VALUES (
 	:task_name, 
 	:estimated_duration_seconds, 
@@ -112,22 +105,26 @@ func InsertTask(task *Task) {
 	:screen_url, 
 	:created_at, 
 	:completed, 
-	:completion_percent)`
+	:completion_percent,
+	:bucket_id)
+	`
 
 	result, err := db.NamedExec(insertQuery, task)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	task.TaskId = lastInsertID
+
+	return nil
 }
 
-func GetTaskByID(id int64) Task {
+func GetTaskByID(db *sqlx.DB, id int64) Task {
 	var task Task
 	err := db.Get(&task, "SELECT * FROM Tasks WHERE task_id = ?", id)
 	if err != nil {
@@ -138,7 +135,7 @@ func GetTaskByID(id int64) Task {
 	return task
 }
 
-func GetAllTasks() ([]Task, error) {
+func GetAllTasks(db *sqlx.DB) ([]Task, error) {
 	var tasks []Task
 
 	rows, err := db.Queryx("SELECT * FROM Tasks ORDER BY created_at DESC")
@@ -155,15 +152,21 @@ func GetAllTasks() ([]Task, error) {
 		tasks = append(tasks, t)
 	}
 
-	// err := db.Select(&tasks, "SELECT * FROM Tasks")
-	// if err != nil {
-	// 	return tasks, nil
-	// }
+	return tasks, nil
+}
+
+func GetTasksByBucketId(db *sqlx.DB, bucketId int64) ([]Task, error) {
+	var tasks []Task
+
+	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE bucket_id = ?", bucketId)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return tasks, nil
 }
 
-func GetAllCompletedTasks() ([]Task, error) {
+func GetAllCompletedTasks(db *sqlx.DB) ([]Task, error) {
 	var tasks []Task
 
 	err := db.Select(&tasks, "SELECT * FROM Tasks WHERE completed = 1 AND actual_duration_seconds > 5 ORDER BY created_at ASC")
@@ -174,7 +177,7 @@ func GetAllCompletedTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-func UpdateTaskAsFinished(task Task) error {
+func UpdateTaskAsFinished(db *sqlx.DB, task Task) error {
 	query := "UPDATE Tasks SET finished_at = ?, actual_duration_seconds = ?, completion_percent = ?, completed = ? WHERE task_id = ?"
 
 	result, err := db.Exec(query, task.FinishedAt, task.ActualDurationSeconds, task.CompletionPercent, task.Completed, task.TaskId)
@@ -190,7 +193,7 @@ func UpdateTaskAsFinished(task Task) error {
 	return nil
 }
 
-func UpdateScreenURL(task Task, target string) error {
+func UpdateScreenURL(db *sqlx.DB, task Task, target string) error {
 	query := "UPDATE Tasks SET screen_url = ? WHERE task_id = ?"
 
 	result, err := db.Exec(query, target, task.TaskId)
@@ -206,7 +209,7 @@ func UpdateScreenURL(task Task, target string) error {
 	return nil
 }
 
-func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
+func UpdateCompletionPercent(db *sqlx.DB, inTask Task, inCompletionPercent float64) error {
 	query := "UPDATE Tasks SET completion_percent = ?, completed = ? WHERE task_id = ?"
 
 	completionPercent := sql.NullFloat64{
@@ -237,7 +240,7 @@ func UpdateCompletionPercent(inTask Task, inCompletionPercent float64) error {
 	return nil
 }
 
-func DeleteTaskByID(id string) (int64, error) {
+func DeleteTaskByID(db *sqlx.DB, id string) (int64, error) {
 	query := "DELETE FROM Tasks WHERE task_id = ?"
 	var rowsAffected int64
 
@@ -254,7 +257,7 @@ func DeleteTaskByID(id string) (int64, error) {
 	return rowsAffected, nil
 }
 
-func GetTasksByDate(inDate time.Time) ([]Task, error) {
+func GetTasksByDate(db *sqlx.DB, inDate time.Time) ([]Task, error) {
 	query := `SELECT * FROM Tasks WHERE DATE(created_at) = DATE(?)`
 
 	var tasks []Task
@@ -267,7 +270,35 @@ func GetTasksByDate(inDate time.Time) ([]Task, error) {
 	return tasks, nil
 }
 
-func GetCapturedTasksByDate(inDate time.Time) ([]Task, error) {
+func GetTasksByDateRange(db *sqlx.DB, startDate, endDate time.Time) ([]Task, error) {
+	query := `SELECT * FROM Tasks WHERE DATE(created_at) BETWEEN ? AND ?`
+
+	var tasks []Task
+
+	err := db.Select(&tasks, query, startDate, endDate)
+	if err != nil {
+		return tasks, err
+	}
+
+	return tasks, nil
+}
+
+func GetRecentTasks(db *sqlx.DB, startDate time.Time, daysBack int) ([]Task, error) {
+	var tasks []Task
+
+	query := `SELECT * FROM Tasks WHERE created_at >= ?`
+
+	prevDate := startDate.AddDate(0, 0, -daysBack)
+
+	err := db.Select(&tasks, query, prevDate)
+	if err != nil {
+		return tasks, err
+	}
+
+	return tasks, nil
+}
+
+func GetCapturedTasksByDate(db *sqlx.DB, inDate time.Time) ([]Task, error) {
 	query := `SELECT * FROM Tasks 
 	WHERE DATE(created_at) = DATE(?)
 	AND screen_enabled = 1

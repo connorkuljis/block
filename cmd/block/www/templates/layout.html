@@ -1,15 +1,12 @@
 {{ define "layout" }}
-<body class="container">
+<body hx-boost="true" class="container">
   <!-- begin header -->
   {{- template "header" . -}}
-  <!-- end header -->
 
   <!-- begin view -->
   <main id="main">{{- template "view" . -}}</main>
-  <!-- end view -->
 
   <!-- begin footer -->
   {{- template "footer" . -}}
-  <!-- end footer -->
 </body>
 {{ end }}

@@ -1,0 +1,108 @@
+{{ define "tasks-table" }}
+<article>
+  <header>
+    <div class="grid">
+      <article>
+        <header><h4>Total Tasks</h4></header>
+        {{ .TaskCount }}
+      </article>
+      <article>
+        <header><h4>Average Time</h4></header>
+        {{ secsToHHMMSS .TaskAverageSeconds }}
+      </article>
+      <article>
+        <header><h4>Total Time</h4></header>
+        {{ secsToHHMMSS .TaskTotalSeconds }}
+      </article>
+      <article>
+        <header><h4>Average Completion</h4></header>
+        {{ printf "%0.2f" .TaskAverageCompletionPercent }}%
+      </article>
+    </div>
+  </header>
+
+  <body>
+    <canvas id="chart"></canvas>
+  </body>
+
+  <footer>
+    <table id="tasks-table">
+      <thead>
+        <th>Id</th>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Time</th>
+        <th>Estimated</th>
+        <th>Actual</th>
+        <th>Completion</th>
+      </thead>
+      <tbody>
+        {{ range .Tasks }}
+        <tr class="task">
+          <td class="task_id">{{ .TaskId }}</td>
+          <td class="created_at">
+            {{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}
+          </td>
+          <td class="task_name">{{ .TaskName }}</td>
+          <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
+          <td>{{ secsToHHMMSS .EstimatedDurationSeconds }}</td>
+          <td>{{ secsToHHMMSS .ActualDurationSeconds.Int64 }}</td>
+          <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </footer>
+</article>
+<script>
+  var tasks = [];
+
+  document.querySelectorAll(".task").forEach((task) => {
+    const taskId = task.querySelector(".task_id").textContent;
+    const taskName = task.querySelector(".task_name").textContent;
+    const time = task.querySelector(".time").textContent;
+
+    tasks.push({
+      TaskId: taskId,
+      TaskName: taskName,
+      Time: parseInt(time),
+    });
+  });
+
+  console.log(tasks);
+
+  var ctx = document.getElementById("chart").getContext("2d");
+  var chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: tasks.map((task) => task.TaskName),
+      datasets: [
+        {
+          label: "Time",
+          data: tasks.map((task) => task.Time),
+          backgroundColor: "rgba(255, 99, 132, 0.2)",
+          borderColor: "rgba(255, 99, 132, 1)",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        y: {
+          title: {
+            text: "Duration (seconds)",
+            display: true,
+          },
+          beginAtZero: true,
+        },
+        x: {
+          title: {
+            text: "Task Name",
+            display: true,
+          },
+        },
+      },
+    },
+  });
+</script>
+{{ end }}

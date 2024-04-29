@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 
@@ -26,17 +25,13 @@ func InitConfig() error {
 		RootConfig:   NewRootConfig(homeDir),
 	}
 
-	log.Println("Checking: " + Cfg.HiddenConfig.Path)
 	if err := makeDirIfNotExists(Cfg.HiddenConfig.Path); err != nil {
 		return err
 	}
-
-	log.Println("Checking: " + Cfg.RootConfig.Path)
 	if err := makeDirIfNotExists(Cfg.RootConfig.Path); err != nil {
 		return err
 	}
 
-	log.Println("Loading config: ", Cfg.HiddenConfig)
 	if err := loadOrMakeConfigFileIfNotExists(Cfg.HiddenConfig); err != nil {
 		return err
 	}
