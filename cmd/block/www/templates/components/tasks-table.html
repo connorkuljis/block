@@ -30,6 +30,7 @@
       <thead>
         <th>Id</th>
         <th>Date</th>
+        <th>Time</th>
         <th>Name</th>
         <th>Time</th>
         <th>Estimated</th>
@@ -40,9 +41,8 @@
         {{ range .Tasks }}
         <tr class="task">
           <td class="task_id">{{ .TaskId }}</td>
-          <td class="created_at">
-            {{ .CreatedAt.Format "January 02 2006 - 3:04pm"}}
-          </td>
+          <td class="created_at">{{ .CreatedAt.Format "02/01/06" }}</td>
+          <td class="created_at">{{ .CreatedAt.Format "3:04pm" }}</td>
           <td class="task_name">{{ .TaskName }}</td>
           <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
           <td>{{ secsToHHMMSS .EstimatedDurationSeconds }}</td>

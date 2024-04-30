@@ -153,12 +153,14 @@ func summariseTasks(tasks []tasks.Task) map[string]any {
 
 	taskCount = int64(len(tasks))
 
-	for i := range tasks {
-		taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
-		taskTotalCompletionPercent += tasks[i].CompletionPercent.Float64
+	if taskCount > 0 {
+		for i := range tasks {
+			taskTotalSeconds += tasks[i].ActualDurationSeconds.Int64
+			taskTotalCompletionPercent += tasks[i].CompletionPercent.Float64
+		}
+		taskAverageSeconds = taskTotalSeconds / taskCount
+		taskAverageCompletionPercent = float64(taskTotalCompletionPercent) / float64(taskCount)
 	}
-	taskAverageSeconds = taskTotalSeconds / taskCount
-	taskAverageCompletionPercent = float64(taskTotalCompletionPercent) / float64(taskCount)
 
 	return map[string]any{
 		"Tasks":                        tasks,
