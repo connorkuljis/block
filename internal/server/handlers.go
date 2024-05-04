@@ -35,8 +35,8 @@ func (s *Server) Routes() error {
 	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", s.StaticContentHandler))
 	s.MuxRouter.HandleFunc("/", s.HandleHome())
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
-	s.MuxRouter.HandleFunc("/tasks/{taskId}/show", s.HandleShowTasks())
-	s.MuxRouter.HandleFunc("/tasks/{taskId}/edit", s.HandleEditTasks())
+	s.MuxRouter.HandleFunc("/tasks/show/{taskId}", s.HandleShowTasks())
+	s.MuxRouter.HandleFunc("/tasks/edit/{taskId}", s.HandleEditTasks())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
 	return nil
 }
@@ -48,113 +48,65 @@ func (s *Server) HandleHome() http.HandlerFunc {
 	}
 }
 
-type TaskEditForm struct {
-	taskName string
-	hours    string
-	minutes  string
-	seconds  string
-}
-
-type SanitisedTaskEditForm struct {
-	hours   int
-	minutes int
-	seconds int
-}
-
-func validateForm(form TaskEditForm) (SanitisedTaskEditForm, error) {
-	var sanitisedForm SanitisedTaskEditForm
-	type FormField struct {
-		String string
-		Result int
-		Max    int
-	}
-
-	fields := []FormField{
-		{String: form.hours, Max: 99},
-		{String: form.minutes, Max: 59},
-		{String: form.seconds, Max: 59},
-	}
-
-	for i := range fields {
-		res, err := strconv.Atoi(fields[i].String)
-		if err != nil {
-			return sanitisedForm, err
-		}
-		if res > fields[i].Max {
-			return sanitisedForm, fmt.Errorf("Error, input exeeds maximum allowed value")
-		}
-		fields[i].Result = res
-	}
-
-	sanitisedForm.hours = fields[0].Result
-	sanitisedForm.minutes = fields[1].Result
-	sanitisedForm.seconds = fields[2].Result
-
-	return sanitisedForm, nil
-}
-
 func (s *Server) HandleEditTasks() http.HandlerFunc {
-	editPage := []string{
-		"root.html",
-		"head.html",
-		"layout.html",
-		"header.html",
-		"nav.html",
-		"footer.html",
-		"edit_tasks.html",
-	}
+	editPage := []string{"root.html", "head.html", "layout.html", "header.html", "nav.html", "footer.html", "edit_tasks.html"}
 
 	editPageTemplate := s.ParseTemplates("edit-tasks", funcMap, editPage...)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		strTaskId := r.PathValue("taskId")
-		taskId, err := strconv.Atoi(strTaskId)
+		taskId, err := strconv.ParseInt(strTaskId, 10, 64)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		if r.Method == "POST" {
-			r.ParseForm()
-			var form TaskEditForm
-			form.taskName = r.FormValue("taskname")
-			form.hours = r.FormValue("hours")
-			form.minutes = r.FormValue("minutes")
-			form.seconds = r.FormValue("seconds")
-
-			sanitisedForm, err := validateForm(form)
+		switch r.Method {
+		case "GET":
+			task, err := tasks.GetTaskByID(s.Db, int64(taskId))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-
-			totalSeconds := sanitisedForm.hours*3600 + sanitisedForm.minutes*60 + sanitisedForm.seconds
-
-			err = tasks.UpdateTaskFinishById(s.Db, int64(taskId), form.taskName, int64(totalSeconds))
+			parcel := map[string]interface{}{"Task": task}
+			htmlBytes, err := SafeTmplExec(editPageTemplate, "root", parcel)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
+			SendHTML(w, htmlBytes)
+		case "POST":
+			r.ParseForm()
+			taskName := r.FormValue("taskname")
+			hours, err := strconv.Atoi(r.FormValue("hours"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			minutes, err := strconv.Atoi(r.FormValue("minutes"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			seconds, err := strconv.Atoi(r.FormValue("seconds"))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if minutes > 59 || seconds > 59 {
+				http.Error(w, "Error, minutes or seconds value must not exceed 59", http.StatusBadRequest)
+			}
+			totalSeconds := int64(hours*3600 + minutes*60 + seconds)
+			err = tasks.UpdateTaskFinishById(s.Db, int64(taskId), taskName, totalSeconds)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 			http.Redirect(w, r, fmt.Sprintf("/tasks/%d/show", taskId), http.StatusSeeOther)
+		default:
+			fmt.Fprintln(w, "Unsupported request type")
 			return
 		}
-
-		task, err := tasks.GetTaskByID(s.Db, int64(taskId))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		parcel := map[string]interface{}{"Task": task}
-
-		htmlBytes, err := SafeTmplExec(editPageTemplate, "root", parcel)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		SendHTML(w, htmlBytes)
 	}
 }
 
@@ -163,11 +115,9 @@ func (s *Server) HandleShowTasks() http.HandlerFunc {
 		"root.html",
 		"head.html",
 		"layout.html",
-
 		"header.html",
 		"nav.html",
 		"footer.html",
-
 		"show_tasks.html",
 	}
 
@@ -232,7 +182,6 @@ func (s *Server) HandleBuckets() http.HandlerFunc {
 }
 
 func (s *Server) HandleTasks() http.HandlerFunc {
-
 	tasksPageTemplateFragments := []string{
 		"root.html",
 		"layout.html",
@@ -271,8 +220,8 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 		parcel := summariseTasks(tasks)
 
 		var htmlBytes []byte
-		switch r.Header.Get("HX-Request") {
-		case "true":
+		switch r.Header.Get("HX-Target") {
+		case "tasks_body":
 			htmlBytes, err = SafeTmplExec(tasksPartial, "tasks-table", parcel)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)

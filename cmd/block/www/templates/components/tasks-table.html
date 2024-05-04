@@ -49,7 +49,7 @@
           <td>{{ PrintTimeHHMMSS .EstimatedDurationSeconds }}</td>
           <td>{{ PrintTimeHHMMSS .ActualDurationSeconds.Int64 }}</td>
           <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
-          <td><a href="/tasks/{{ .TaskId }}/show">show</a></td>
+          <td><a href="/tasks/show/{{ .TaskId }}">show</a></td>
         </tr>
         {{ end }}
       </tbody>
