@@ -266,7 +266,9 @@ var ServeCmd = &cli.Command{
 	Action: func(ctx *cli.Context) error {
 		db := ctx.Context.Value("db").(*sqlx.DB)
 
-		s, err := server.NewServer(embedWebContent, db, "8080")
+		templatesPath := "www/templates"
+		staticPath := "www/static"
+		s, err := server.NewServer(embedWebContent, db, "8080", templatesPath, staticPath)
 
 		err = s.Routes()
 		if err != nil {

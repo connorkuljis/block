@@ -8,11 +8,11 @@
       </article>
       <article>
         <header><h4>Average Time</h4></header>
-        {{ secsToHHMMSS .TaskAverageSeconds }}
+        {{ PrintTimeHHMMSS .TaskAverageSeconds }}
       </article>
       <article>
         <header><h4>Total Time</h4></header>
-        {{ secsToHHMMSS .TaskTotalSeconds }}
+        {{ PrintTimeHHMMSS .TaskTotalSeconds }}
       </article>
       <article>
         <header><h4>Average Completion</h4></header>
@@ -36,6 +36,7 @@
         <th>Estimated</th>
         <th>Actual</th>
         <th>Completion</th>
+        <th></th>
       </thead>
       <tbody>
         {{ range .Tasks }}
@@ -45,9 +46,10 @@
           <td class="created_at">{{ .CreatedAt.Format "3:04pm" }}</td>
           <td class="task_name">{{ .TaskName }}</td>
           <td class="time">{{ .ActualDurationSeconds.Int64 }}</td>
-          <td>{{ secsToHHMMSS .EstimatedDurationSeconds }}</td>
-          <td>{{ secsToHHMMSS .ActualDurationSeconds.Int64 }}</td>
+          <td>{{ PrintTimeHHMMSS .EstimatedDurationSeconds }}</td>
+          <td>{{ PrintTimeHHMMSS .ActualDurationSeconds.Int64 }}</td>
           <td>{{ printf "%0.1f" .CompletionPercent.Float64 }}%</td>
+          <td><a href="/tasks/{{ .TaskId }}/show">show</a></td>
         </tr>
         {{ end }}
       </tbody>

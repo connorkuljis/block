@@ -196,22 +196,17 @@ func UpdateTaskAsFinished(db *sqlx.DB, task Task) error {
 	return nil
 }
 
-func UpdateTask(db *sqlx.DB, task Task) error {
-	query := `
-	UPDATE Tasks 
-	SET 
-      task_name               = ?
-    , actual_duration_seconds = ?
-	WHERE task_id = ?`
+func UpdateTaskFinishById(db *sqlx.DB, taskId int64, taskName string, actualDurationSeconds int64) error {
+	query := `UPDATE Tasks SET task_name = ?, actual_duration_seconds = ? WHERE task_id = ?`
 
-	result, err := db.Exec(query, task.TaskName, task.ActualDurationSeconds, task.TaskId)
+	result, err := db.Exec(query, taskName, actualDurationSeconds, taskId)
 	if err != nil {
-		return fmt.Errorf("Error updating task %d: %w", task.TaskId, err)
+		return fmt.Errorf("Error updating task %d: %w", taskId, err)
 	}
 
 	_, err = result.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("Error updating task %d: %w", task.TaskId, err)
+		return fmt.Errorf("Error updating task %d: %w", taskId, err)
 	}
 
 	return nil

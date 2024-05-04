@@ -2,7 +2,7 @@ package server
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -15,132 +15,93 @@ import (
 // Server encapsulates all dependencies for the web Server.
 // HTTP handlers access information via receiver types.
 type Server struct {
-	FileSystem        fs.FS
-	MuxRouter         *http.ServeMux
-	Db                *sqlx.DB
-	TemplateFragments TemplateFragments
+	FileSystem           fs.FS
+	StaticContentHandler http.Handler
+	MuxRouter            *http.ServeMux
+	TemplateMap          map[string]string
+	Db                   *sqlx.DB
 
 	Port string
 }
-
-type TemplateFragments struct {
-	Base       map[string]string
-	Components map[string]string
-	Views      map[string]string
-}
-
-const (
-	TemplatesDirStr  = "www/templates"
-	StaticDirStr     = "www/static"
-	ComponentsDirStr = "components"
-	ViewsDirStr      = "views"
-)
 
 // NewServer returns a new pointer Server struct.
 //
 // Server encapsulates all dependencies for the web Server.
 // HTTP handlers access information via receiver types.
-func NewServer(fileSystem fs.FS, db *sqlx.DB, port string) (*Server, error) {
-	templateFragments, err := ExtractTemplateFragmentsFromFilesystem(fileSystem)
+func NewServer(fileSystem fs.FS, db *sqlx.DB, port, templatesPath, staticPath string) (*Server, error) {
+	templateMap, err := BuildTemplateMap(fileSystem, templatesPath)
 	if err != nil {
 		return nil, err
 	}
-
-	s := &Server{
-		FileSystem:        fileSystem,
-		MuxRouter:         http.NewServeMux(),
-		Db:                db,
-		Port:              port,
-		TemplateFragments: templateFragments,
+	scfs, err := fs.Sub(fileSystem, staticPath)
+	if err != nil {
+		return nil, err
 	}
-
+	s := &Server{
+		FileSystem:           fileSystem,
+		MuxRouter:            http.NewServeMux(),
+		Port:                 port,
+		StaticContentHandler: http.FileServer(http.FS(scfs)),
+		TemplateMap:          templateMap,
+		Db:                   db,
+	}
 	return s, nil
 }
 
-func (s *Server) ListenAndServe() error {
-	log.Println("[ 💿 Spinning up server on http://localhost:" + s.Port + " ]")
-	if err := http.ListenAndServe(":"+s.Port, s.MuxRouter); err != nil {
-		log.Println("Error starting server.")
-		return err
-	}
+func BuildTemplateMap(filesystem fs.FS, templatesPath string) (map[string]string, error) {
+	templates := make(map[string]string)
 
-	return nil
-}
-
-// ExtractTemplateFragmentsFromFilesystem traverses the base, components and views directory in the given filesystem and returns a Fragments structure, or an error if an error occurs.
-func ExtractTemplateFragmentsFromFilesystem(filesystem fs.FS) (TemplateFragments, error) {
-	var templateFragments TemplateFragments
-	var err error
-
-	// load root templates
-	templatesPath := TemplatesDirStr
-	templateFragments.Base, err = buildFilePathMap(filesystem, templatesPath)
-	if err != nil {
-		return templateFragments, err
-	}
-
-	// load components templates
-	componentsPath := filepath.Join(TemplatesDirStr, ComponentsDirStr)
-	templateFragments.Components, err = buildFilePathMap(filesystem, componentsPath)
-	if err != nil {
-		return templateFragments, err
-	}
-
-	// load views templates
-	viewsPath := filepath.Join(TemplatesDirStr, ViewsDirStr)
-	templateFragments.Views, err = buildFilePathMap(filesystem, viewsPath)
-	if err != nil {
-		return templateFragments, err
-	}
-
-	return templateFragments, nil
-}
-
-// buildFilePathMap reads the filepath of all regular files into a map, keyed by the filename
-func buildFilePathMap(filesystem fs.FS, path string) (map[string]string, error) {
-	filePathMap := make(map[string]string)
-
-	files, err := fs.ReadDir(filesystem, path)
-	if err != nil {
-		return filePathMap, err
-	}
-
-	for _, file := range files {
-		if !file.IsDir() {
-			name := file.Name()               // "index.html"
-			path := filepath.Join(path, name) // "www/static/templates/views/index/html"
-			filePathMap[name] = path          // "index.html" => "www/static/templates/views/index/html"
+	err := fs.WalkDir(filesystem, templatesPath, func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() && filepath.Ext(d.Name()) == ".html" {
+			templates[d.Name()] = path
 		}
+		return nil
+	})
+	if err != nil {
+		return templates, err
 	}
 
-	return filePathMap, nil
+	return templates, nil
 }
 
 // buildTemplates is a fast way to parse a collection of templates in the server filesystem.
 //
 // template files are provided as strings to be parsed from the filesystem
-func (s *Server) BuildTemplates(name string, funcs template.FuncMap, templates ...string) *template.Template {
-	for _, template := range templates {
-		if template == "" {
-			log.Fatal(errors.New("Error building template for (" + name + "): an empty template was detected..."))
-		}
-	}
-	// give the template a name
+func (s *Server) ParseTemplates(name string, funcs template.FuncMap, templateKeys ...string) *template.Template {
 	tmpl := template.New(name)
-
-	// custom template functions if exists
 	if funcs != nil {
 		tmpl.Funcs(funcs)
 	}
 
-	// generate a template from the files in the server fs (usually embedded)
-	tmpl, err := tmpl.ParseFS(s.FileSystem, templates...)
-	if err != nil {
-		log.Fatal(err)
+	var templatePaths []string
+	for _, key := range templateKeys {
+		path, ok := s.TemplateMap[key]
+		if !ok {
+			log.Fatalf("Error parsing template [%s], key does not exist [%s]", name, key)
+		}
+		templatePaths = append(templatePaths, path)
 	}
 
+	tmpl, err := tmpl.ParseFS(s.FileSystem, templatePaths...)
+	if err != nil {
+		err = fmt.Errorf("Error building template name='%s': %w", name, err)
+		log.Fatal(err)
+	}
 	return tmpl
 }
+
+func (s *Server) ListenAndServe() error {
+	log.Println("[ 💿 Spinning up server on http://localhost:" + s.Port + " ]")
+	if err := http.ListenAndServe(":"+s.Port, s.MuxRouter); err != nil {
+		return fmt.Errorf("Error starting server: %w", err)
+	}
+	return nil
+}
+
+//
+// Utils
+//
+//
 
 // safeTmplParse executes a given template to a bytes buffer. It returns the resulting buffer or nil, err if any error occurred.
 //

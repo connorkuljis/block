@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"io/fs"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -12,19 +11,33 @@ import (
 	"github.com/connorkuljis/block-cli/internal/tasks"
 )
 
+var funcMap = template.FuncMap{
+	"PrintTimeHHMMSS": func(secs int64) string {
+		hours := secs / 3600
+		minutes := (secs % 3600) / 60
+		seconds := secs % 60
+		return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+	},
+	"ParseTimeHHMMSS": func(secs int64) map[string]int64 {
+		hours := secs / 3600
+		minutes := (secs % 3600) / 60
+		seconds := secs % 60
+		return map[string]int64{
+			"Hours":   hours,
+			"Minutes": minutes,
+			"Seconds": seconds,
+		}
+	},
+}
+
 // Routes instatiates http Handlers and associated patterns on the server.
 func (s *Server) Routes() error {
-	scfs, err := fs.Sub(s.FileSystem, StaticDirStr) // static content sub fs from the server's embedded fs
-	if err != nil {
-		return err
-	}
-
-	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(scfs))))
+	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", s.StaticContentHandler))
 	s.MuxRouter.HandleFunc("/", s.HandleHome())
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
-	s.MuxRouter.HandleFunc("/tasks/{id}", s.HandleTasksById())
+	s.MuxRouter.HandleFunc("/tasks/{taskId}/show", s.HandleShowTasks())
+	s.MuxRouter.HandleFunc("/tasks/{taskId}/edit", s.HandleEditTasks())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
-
 	return nil
 }
 
@@ -35,43 +48,169 @@ func (s *Server) HandleHome() http.HandlerFunc {
 	}
 }
 
-func (s *Server) HandleTasksById() http.HandlerFunc {
+type TaskEditForm struct {
+	taskName string
+	hours    string
+	minutes  string
+	seconds  string
+}
+
+type SanitisedTaskEditForm struct {
+	hours   int
+	minutes int
+	seconds int
+}
+
+func validateForm(form TaskEditForm) (SanitisedTaskEditForm, error) {
+	var sanitisedForm SanitisedTaskEditForm
+	type FormField struct {
+		String string
+		Result int
+		Max    int
+	}
+
+	fields := []FormField{
+		{String: form.hours, Max: 99},
+		{String: form.minutes, Max: 59},
+		{String: form.seconds, Max: 59},
+	}
+
+	for i := range fields {
+		res, err := strconv.Atoi(fields[i].String)
+		if err != nil {
+			return sanitisedForm, err
+		}
+		if res > fields[i].Max {
+			return sanitisedForm, fmt.Errorf("Error, input exeeds maximum allowed value")
+		}
+		fields[i].Result = res
+	}
+
+	sanitisedForm.hours = fields[0].Result
+	sanitisedForm.minutes = fields[1].Result
+	sanitisedForm.seconds = fields[2].Result
+
+	return sanitisedForm, nil
+}
+
+func (s *Server) HandleEditTasks() http.HandlerFunc {
+	editPage := []string{
+		"root.html",
+		"head.html",
+		"layout.html",
+		"header.html",
+		"nav.html",
+		"footer.html",
+		"edit_tasks.html",
+	}
+
+	editPageTemplate := s.ParseTemplates("edit-tasks", funcMap, editPage...)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		sId := r.PathValue("id")
+		strTaskId := r.PathValue("taskId")
+		taskId, err := strconv.Atoi(strTaskId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		if r.Method == "POST" {
+			r.ParseForm()
+			var form TaskEditForm
+			form.taskName = r.FormValue("taskname")
+			form.hours = r.FormValue("hours")
+			form.minutes = r.FormValue("minutes")
+			form.seconds = r.FormValue("seconds")
 
+			sanitisedForm, err := validateForm(form)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			totalSeconds := sanitisedForm.hours*3600 + sanitisedForm.minutes*60 + sanitisedForm.seconds
+
+			err = tasks.UpdateTaskFinishById(s.Db, int64(taskId), form.taskName, int64(totalSeconds))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			http.Redirect(w, r, fmt.Sprintf("/tasks/%d/show", taskId), http.StatusSeeOther)
+			return
 		}
 
-		iId, err := strconv.Atoi(sId)
+		task, err := tasks.GetTaskByID(s.Db, int64(taskId))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		task, err := tasks.GetTaskByID(s.Db, int64(iId))
+		parcel := map[string]interface{}{"Task": task}
+
+		htmlBytes, err := SafeTmplExec(editPageTemplate, "root", parcel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		SendHTML(w, htmlBytes)
+	}
+}
+
+func (s *Server) HandleShowTasks() http.HandlerFunc {
+	page := []string{
+		"root.html",
+		"head.html",
+		"layout.html",
+
+		"header.html",
+		"nav.html",
+		"footer.html",
+
+		"show_tasks.html",
+	}
+
+	t := s.ParseTemplates("show-tasks", funcMap, page...)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		strTaskId := r.PathValue("taskId")
+		taskId, err := strconv.Atoi(strTaskId)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		return
+		task, err := tasks.GetTaskByID(s.Db, int64(taskId))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		parcel := map[string]interface{}{"Task": task}
+
+		htmlBytes, err := SafeTmplExec(t, "root", parcel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		SendHTML(w, htmlBytes)
 	}
 }
 
 func (s *Server) HandleBuckets() http.HandlerFunc {
 	bucketsTemplateFragments := []string{
-		s.TemplateFragments.Base["root.html"],
-		s.TemplateFragments.Base["layout.html"],
-		s.TemplateFragments.Base["head.html"],
-		s.TemplateFragments.Components["header.html"],
-		s.TemplateFragments.Components["footer.html"],
-		s.TemplateFragments.Components["nav.html"],
-		s.TemplateFragments.Views["buckets.html"],
+		"root.html",
+		"layout.html",
+		"head.html",
+		"header.html",
+		"footer.html",
+		"nav.html",
+		"buckets.html",
 	}
 
-	bucketsTemplate := s.BuildTemplates("index", nil, bucketsTemplateFragments...)
+	bucketsTemplate := s.ParseTemplates("index", nil, bucketsTemplateFragments...)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		buckets, err := buckets.GetAllBuckets(s.Db)
@@ -89,45 +228,28 @@ func (s *Server) HandleBuckets() http.HandlerFunc {
 		}
 
 		SendHTML(w, htmlBytes)
-		return
 	}
 }
 
 func (s *Server) HandleTasks() http.HandlerFunc {
-	funcMap := template.FuncMap{
-		"secsToHHMMSS": func(secs int64) string {
-			hours := secs / 3600
-			minutes := (secs % 3600) / 60
-			seconds := secs % 60
-
-			var formattedString string
-			if hours > 0 {
-				formattedString = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-			} else {
-				formattedString = fmt.Sprintf("%02d:%02d", minutes, seconds)
-			}
-
-			return formattedString
-		},
-	}
 
 	tasksPageTemplateFragments := []string{
-		s.TemplateFragments.Base["root.html"],
-		s.TemplateFragments.Base["layout.html"],
-		s.TemplateFragments.Base["head.html"],
-		s.TemplateFragments.Components["header.html"],
-		s.TemplateFragments.Components["footer.html"],
-		s.TemplateFragments.Components["nav.html"],
-		s.TemplateFragments.Components["form-get-tasks.html"],
-		s.TemplateFragments.Components["tasks-table.html"],
-		s.TemplateFragments.Views["index.html"],
+		"root.html",
+		"layout.html",
+		"head.html",
+		"header.html",
+		"footer.html",
+		"nav.html",
+		"form-get-tasks.html",
+		"tasks-table.html",
+		"index.html",
 	}
 
-	taskPartialTemplateFragment := s.TemplateFragments.Components["tasks-table.html"]
+	taskPartialTemplateFragment := "tasks-table.html"
 
-	tasksPage := s.BuildTemplates("tasks-page", funcMap, tasksPageTemplateFragments...)
+	tasksPage := s.ParseTemplates("tasks-page", funcMap, tasksPageTemplateFragments...)
 
-	tasksPartial := s.BuildTemplates("tasks-partial", funcMap, taskPartialTemplateFragment)
+	tasksPartial := s.ParseTemplates("tasks-partial", funcMap, taskPartialTemplateFragment)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var daysBack = 7
@@ -165,7 +287,6 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 		}
 
 		SendHTML(w, htmlBytes)
-		return
 	}
 }
 
