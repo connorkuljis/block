@@ -56,8 +56,10 @@
 </article>
 <script>
   var tasks = [];
+  var taskElements = document.querySelectorAll(".task");
 
-  document.querySelectorAll(".task").forEach((task) => {
+  for (let i = 0; i < taskElements.length; i++) {
+    const task = taskElements[i];
     const taskId = task.querySelector(".task_id").textContent;
     const taskName = task.querySelector(".task_name").textContent;
     const time = task.querySelector(".time").textContent;
@@ -67,13 +69,12 @@
       TaskName: taskName,
       Time: parseInt(time),
     });
-  });
-
+  }
   console.log(tasks);
 
   var ctx = document.getElementById("chart").getContext("2d");
   var chart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
       labels: tasks.map((task) => task.TaskName),
       datasets: [

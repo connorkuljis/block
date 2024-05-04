@@ -28,22 +28,23 @@ type Task struct {
 	BucketId                 sql.NullInt64   `db:"bucket_id"`
 }
 
-var TasksSchema = `
-	CREATE TABLE IF NOT EXISTS Tasks(
-    task_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    task_name TEXT NOT NULL,
-    estimated_duration_seconds INTEGER NOT NULL,
-    actual_duration_seconds INTEGER,
-    blocker_enabled INTEGER DEFAULT 0,
-    screen_enabled INTEGER DEFAULT 0,
-    screen_url TEXT,
-    created_at TIMESTAMP NOT NULL,
-    finished_at TIMESTAMP,
-    completed INTEGER,
-    completion_percent REAL,
-    status TEXT,
-    bucket_id INTEGER,
-    FOREIGN KEY (bucket_id) REFERENCES Buckets(bucket_id)
+const TasksSchema = `
+	CREATE TABLE IF NOT EXISTS Tasks
+	(
+      task_id                    INTEGER PRIMARY KEY AUTOINCREMENT
+    , task_name                  TEXT NOT NULL
+    , estimated_duration_seconds INTEGER NOT NULL
+    , actual_duration_seconds    INTEGER
+    , blocker_enabled            INTEGER DEFAULT 0
+    , screen_enabled             INTEGER DEFAULT 0
+    , screen_url                 TEXT
+    , created_at                 TIMESTAMP NOT NULL
+    , finished_at                TIMESTAMP
+    , completed                  INTEGER
+    , completion_percent         REAL
+    , status                     TEXT           
+    , bucket_id                  INTEGER
+    , FOREIGN KEY (bucket_id) REFERENCES Buckets(bucket_id)
 	);
 `
 
@@ -78,36 +79,39 @@ func (task *Task) SetCompletionPercent(completionPercent float64) {
 	}
 }
 
-func (task *Task) UpdateFinishTime(finishedAt time.Time) {
+func (task *Task) SetFinishTime(finishedAt time.Time) {
 	task.FinishedAt = sql.NullTime{Time: finishedAt, Valid: true}
 }
 
-func (task *Task) UpdateActualDuration(actualDurationSeconds int) {
+func (task *Task) SetActualDuration(actualDurationSeconds int) {
 	task.ActualDurationSeconds = sql.NullInt64{Int64: int64(actualDurationSeconds), Valid: true}
 }
 
 func InsertTask(db *sqlx.DB, task *Task) error {
-	insertQuery := `INSERT INTO Tasks (
-	task_name, 
-	estimated_duration_seconds, 
-	blocker_enabled, 
-	screen_enabled, 
-	screen_url, 
-	created_at, 
-	completed, 
-	completion_percent,
-	bucket_id) 
-	VALUES (
-	:task_name, 
-	:estimated_duration_seconds, 
-	:blocker_enabled, 
-	:screen_enabled, 
-	:screen_url, 
-	:created_at, 
-	:completed, 
-	:completion_percent,
-	:bucket_id)
-	`
+	insertQuery := `INSERT INTO Tasks 
+	(
+	  task_name
+	, estimated_duration_seconds
+	, blocker_enabled
+	, screen_enabled
+	, screen_url
+	, created_at
+	, completed
+	, completion_percent
+	, bucket_id
+	) 
+	VALUES 
+	(
+	  :task_name
+	, :estimated_duration_seconds
+	, :blocker_enabled
+	, :screen_enabled
+	, :screen_url
+	, :created_at
+	, :completed
+	, :completion_percent
+	, :bucket_id
+	)`
 
 	result, err := db.NamedExec(insertQuery, task)
 	if err != nil {
@@ -124,15 +128,14 @@ func InsertTask(db *sqlx.DB, task *Task) error {
 	return nil
 }
 
-func GetTaskByID(db *sqlx.DB, id int64) Task {
+func GetTaskByID(db *sqlx.DB, id int64) (Task, error) {
 	var task Task
 	err := db.Get(&task, "SELECT * FROM Tasks WHERE task_id = ?", id)
 	if err != nil {
-		log.Fatal(err)
+		return task, err
 	}
 
-	fmt.Printf("Retrieved Record: %+v\n", task)
-	return task
+	return task, nil
 }
 
 func GetAllTasks(db *sqlx.DB) ([]Task, error) {
@@ -188,6 +191,27 @@ func UpdateTaskAsFinished(db *sqlx.DB, task Task) error {
 	_, err = result.LastInsertId()
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func UpdateTask(db *sqlx.DB, task Task) error {
+	query := `
+	UPDATE Tasks 
+	SET 
+      task_name               = ?
+    , actual_duration_seconds = ?
+	WHERE task_id = ?`
+
+	result, err := db.Exec(query, task.TaskName, task.ActualDurationSeconds, task.TaskId)
+	if err != nil {
+		return fmt.Errorf("Error updating task %d: %w", task.TaskId, err)
+	}
+
+	_, err = result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("Error updating task %d: %w", task.TaskId, err)
 	}
 
 	return nil

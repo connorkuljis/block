@@ -22,6 +22,7 @@ func (s *Server) Routes() error {
 	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(scfs))))
 	s.MuxRouter.HandleFunc("/", s.HandleHome())
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
+	s.MuxRouter.HandleFunc("/tasks/{id}", s.HandleTasksById())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
 
 	return nil
@@ -30,6 +31,31 @@ func (s *Server) Routes() error {
 func (s *Server) HandleHome() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/tasks", http.StatusSeeOther)
+		return
+	}
+}
+
+func (s *Server) HandleTasksById() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		sId := r.PathValue("id")
+
+		if r.Method == "POST" {
+
+		}
+
+		iId, err := strconv.Atoi(sId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		task, err := tasks.GetTaskByID(s.Db, int64(iId))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		return
 	}
 }
@@ -60,7 +86,6 @@ func (s *Server) HandleBuckets() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-
 		}
 
 		SendHTML(w, htmlBytes)

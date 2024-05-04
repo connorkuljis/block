@@ -30,9 +30,9 @@ func Start(w io.Writer, db *sqlx.DB, currentTask tasks.Task) error {
 	totalTimeSeconds, percent := interactive.Run(w, &currentTask, blocker, db)
 	finishTime := time.Now()
 
-	currentTask.UpdateActualDuration(totalTimeSeconds)
+	currentTask.SetActualDuration(totalTimeSeconds)
 	currentTask.SetCompletionPercent(percent)
-	currentTask.UpdateFinishTime(finishTime)
+	currentTask.SetFinishTime(finishTime)
 
 	err = tasks.UpdateTaskAsFinished(db, currentTask)
 	if err != nil {
