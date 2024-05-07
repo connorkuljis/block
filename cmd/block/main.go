@@ -55,12 +55,44 @@ func main() {
 			ServeCmd,
 			GenerateCmd,
 			ResetDNSCmd,
+			UpCmd,
+			DownCmd,
 		},
 	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+var UpCmd = &cli.Command{
+	Name:  "up",
+	Usage: "enable the blocker",
+	Action: func(ctx *cli.Context) error {
+		slog.Info("Blocker up.")
+		blocker := blocker.NewBlocker()
+		n, err := blocker.Start()
+		if err != nil {
+			return fmt.Errorf("Error running up command: %w", err)
+		}
+		slog.Info(fmt.Sprintf("%d bytes written", n))
+		return nil
+	},
+}
+
+var DownCmd = &cli.Command{
+	Name:  "down",
+	Usage: "disable the blocker",
+	Action: func(ctx *cli.Context) error {
+		slog.Info("Blocker down.")
+		blocker := blocker.NewBlocker()
+		n, err := blocker.Stop()
+		if err != nil {
+			return fmt.Errorf("Error running down command: %w", err)
+		}
+		slog.Info(fmt.Sprintf("%d bytes written", n))
+		return nil
+	},
 }
 
 var StartCmd = &cli.Command{
