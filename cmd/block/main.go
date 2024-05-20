@@ -156,9 +156,15 @@ var StartCmd = &cli.Command{
 			totalSecondsToday += task.ActualDurationSeconds.Int64
 		}
 
+		// take a break for 1/3 of time worked.
+		var breakRatio float64
+		var totalBreakSecondsToday int64
+		breakRatio = 1.0 / 3
+		totalBreakSecondsToday = int64(float64(totalSecondsToday) * breakRatio)
+
 		fmt.Println("---")
 		fmt.Println("Total focus time today ==>", utils.SecsToHHMMSS(totalSecondsToday))
-		fmt.Println("Total break time today ==>", utils.SecsToHHMMSS(totalSecondsToday*(1/3)))
+		fmt.Println("Cumulative break time today ==>", utils.SecsToHHMMSS(totalBreakSecondsToday))
 		fmt.Println("Goodbye.")
 
 		return nil
