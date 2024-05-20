@@ -332,5 +332,3 @@ func GetCapturedTasksByDate(db *sqlx.DB, inDate time.Time) ([]Task, error) {
 
 	return tasks, nil
 }
-
-func 
