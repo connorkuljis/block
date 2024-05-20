@@ -1,12 +1,12 @@
 {{ define "nav" }}
-<nav hx-boost="false">
-  <ul role="list">
-    <li><a href="/tasks">tasks</a></li>
-    <li><a href="/buckets">buckets</a></li>
-  </ul>
+<nav>
+  <div role="listitem"><a href="/tasks">tasks</a></div>
+  <div role="listitem"><a href="/daily">daily</a></div>
+  <div role="listitem"><a href="/buckets">buckets</a></div>
   <style>
-    this li {
-      display: inline-block;
+    this {
+      display: flex;
+      flex-direction: column;
     }
   </style>
 </nav>

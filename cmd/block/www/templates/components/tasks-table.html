@@ -4,19 +4,19 @@
     <div class="grid">
       <article>
         <header><h4>Total Tasks</h4></header>
-        {{ .TaskCount }}
+        {{ .TaskSummary.TaskCount }}
       </article>
       <article>
         <header><h4>Average Time</h4></header>
-        {{ PrintTimeHHMMSS .TaskAverageSeconds }}
+        {{ PrintTimeHHMMSS .TaskSummary.TaskAverageSeconds }}
       </article>
       <article>
         <header><h4>Total Time</h4></header>
-        {{ PrintTimeHHMMSS .TaskTotalSeconds }}
+        {{ PrintTimeHHMMSS .TaskSummary.TaskTotalSeconds }}
       </article>
       <article>
         <header><h4>Average Completion</h4></header>
-        {{ printf "%0.2f" .TaskAverageCompletionPercent }}%
+        {{ printf "%0.2f" .TaskSummary.TaskAverageCompletionPercent }}%
       </article>
     </div>
   </header>

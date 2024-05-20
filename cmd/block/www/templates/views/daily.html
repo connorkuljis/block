@@ -1,0 +1,9 @@
+{{ define "view" }}
+<h3>Daily</h3>
+<div>
+  <a href="/daily?created_at={{ .DatePrev }}">&larr;</a>
+  <span> {{ .DateCurrent }} </span>
+  <a href="/daily?created_at={{ .DateNext }}">&rarr;</a>
+</div>
+<div id="tasks_body">{{ template "tasks-table" . }}</div>
+{{ end }}

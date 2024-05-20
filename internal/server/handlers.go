@@ -37,6 +37,7 @@ func (s *Server) Routes() error {
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
 	s.MuxRouter.HandleFunc("/tasks/show/{taskId}", s.HandleShowTasks())
 	s.MuxRouter.HandleFunc("/tasks/edit/{taskId}", s.HandleEditTasks())
+	s.MuxRouter.HandleFunc("/daily/", s.HandleDaily())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
 	return nil
 }
@@ -148,6 +149,66 @@ func (s *Server) HandleShowTasks() http.HandlerFunc {
 		SendHTML(w, htmlBytes)
 	}
 }
+func (s *Server) HandleDaily() http.HandlerFunc {
+	templates := []string{
+		"root.html",
+		"layout.html",
+		"head.html",
+		"header.html",
+		"footer.html",
+		"nav.html",
+		"tasks-table.html",
+		"daily.html",
+	}
+
+	t := s.ParseTemplates("daily", funcMap, templates...)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		timestamp := r.URL.Query().Get("created_at")
+		format := "2006-01-02"
+
+		var dateCurrent time.Time
+		if timestamp != "" {
+			var err error
+			dateCurrent, err = time.Parse(format, timestamp)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			dateCurrent = time.Now().Truncate(24 * time.Hour)
+		}
+
+		datePrev := dateCurrent.Add(-24 * time.Hour)
+
+		// TODO: validate if overflows current date. if so, don't display the control in the html
+		dateNext := dateCurrent.Add(24 * time.Hour)
+
+		tasks, err := tasks.GetTasksByDate(s.Db, dateCurrent)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		taskSummary := summariseTasks(tasks)
+
+		parcel := map[string]any{
+			"Tasks":       tasks,
+			"DateCurrent": dateCurrent.Format(format),
+			"DatePrev":    datePrev.Format(format),
+			"DateNext":    dateNext.Format(format),
+			"TaskSummary": taskSummary,
+		}
+
+		htmlBytes, err := SafeTmplExec(t, "root", parcel)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		SendHTML(w, htmlBytes)
+	}
+}
 
 func (s *Server) HandleBuckets() http.HandlerFunc {
 	bucketsTemplateFragments := []string{
@@ -217,7 +278,12 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 			return
 		}
 
-		parcel := summariseTasks(tasks)
+		taskSummary := summariseTasks(tasks)
+
+		parcel := map[string]any{
+			"Tasks":       tasks,
+			"TaskSummary": taskSummary,
+		}
 
 		var htmlBytes []byte
 		switch r.Header.Get("HX-Target") {
@@ -239,7 +305,14 @@ func (s *Server) HandleTasks() http.HandlerFunc {
 	}
 }
 
-func summariseTasks(tasks []tasks.Task) map[string]any {
+type TasksSummary struct {
+	TaskCount                    int64
+	TaskTotalSeconds             int64
+	TaskAverageSeconds           int64
+	TaskAverageCompletionPercent float64
+}
+
+func summariseTasks(tasks []tasks.Task) TasksSummary {
 	var taskCount int64
 	var taskTotalSeconds int64
 	var taskAverageSeconds int64
@@ -257,11 +330,10 @@ func summariseTasks(tasks []tasks.Task) map[string]any {
 		taskAverageCompletionPercent = float64(taskTotalCompletionPercent) / float64(taskCount)
 	}
 
-	return map[string]any{
-		"Tasks":                        tasks,
-		"TaskCount":                    taskCount,
-		"TaskTotalSeconds":             taskTotalSeconds,
-		"TaskAverageSeconds":           taskAverageSeconds,
-		"TaskAverageCompletionPercent": taskAverageCompletionPercent,
+	return TasksSummary{
+		TaskCount:                    taskCount,
+		TaskTotalSeconds:             taskTotalSeconds,
+		TaskAverageSeconds:           taskAverageSeconds,
+		TaskAverageCompletionPercent: taskAverageCompletionPercent,
 	}
 }
