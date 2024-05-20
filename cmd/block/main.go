@@ -158,6 +158,7 @@ var StartCmd = &cli.Command{
 
 		fmt.Println("---")
 		fmt.Println("Total focus time today ==>", utils.SecsToHHMMSS(totalSecondsToday))
+		fmt.Println("Total break time today ==>", utils.SecsToHHMMSS(totalSecondsToday*(1/3)))
 		fmt.Println("Goodbye.")
 
 		return nil
