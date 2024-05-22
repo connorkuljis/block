@@ -1,54 +1,8 @@
 {{ define "tasks-table" }}
-<div class="grid">
-  <div>
-    <h4>Total Tasks</h4>
-    <strong>{{ .TaskSummary.TaskCount }}</strong>
-  </div>
-  <div>
-    <h4>Average Time</h4>
-    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskAverageSeconds }}</strong>
-  </div>
-  <div>
-    <h4>Total Time</h4>
-    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskTotalSeconds }}</strong>
-  </div>
-  <div>
-    <h4>Average Completion</h4>
-    <strong
-      >{{ printf "%0.2f" .TaskSummary.TaskAverageCompletionPercent }}%</strong
-    >
-  </div>
+<!-- chart -->
+<div style="height: 400px; width: 800px">
+  <canvas id="chart"></canvas>
 </div>
-
-<section>
-  <div style="height: 400px; width: 800px">
-    <canvas id="chart"></canvas>
-  </div>
-
-  <table class="striped" id="tasks-table">
-    <thead>
-      <th>Name</th>
-      <th>Duration</th>
-      <th>Seconds</th>
-      <th>Date</th>
-      <th></th>
-    </thead>
-    <tbody>
-      {{ range .Tasks }}
-      <tr class="task">
-        <td id="task_name">{{ .TaskName }}</td>
-        <td>{{ PrintTimeHHMMSS .ActualDurationSeconds.Int64 }}</td>
-        <td id="seconds">{{ .ActualDurationSeconds.Int64 }}</td>
-        <td style="text-align: right" class="created_at">
-          {{ .CreatedAt.Format "3:04PM" }}- {{ .FinishedAt.Time.Format "03:04PM"
-          }} {{ .CreatedAt.Format "01-02-06" }}
-        </td>
-        <td><a href="/tasks/show/{{ .TaskId }}">show</a></td>
-      </tr>
-      {{ end }}
-    </tbody>
-  </table>
-</section>
 
 <script>
   var tasks = [];
@@ -64,7 +18,6 @@
       Seconds: parseInt(seconds),
     });
   }
-  console.log(tasks);
 
   var ctx = document.getElementById("chart").getContext("2d");
   var chart = new Chart(ctx, {
@@ -100,5 +53,52 @@
       responsive: true, // enable responsive chart
     },
   });
+
+  tasks = [];
 </script>
+
+<div class="grid">
+  <div>
+    <h4>Total Tasks</h4>
+    <strong>{{ .TaskSummary.TaskCount }}</strong>
+  </div>
+  <div>
+    <h4>Average Time</h4>
+    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskAverageSeconds }}</strong>
+  </div>
+  <div>
+    <h4>Total Time</h4>
+    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskTotalSeconds }}</strong>
+  </div>
+  <div>
+    <h4>Average Completion</h4>
+    <strong
+      >{{ printf "%0.2f" .TaskSummary.TaskAverageCompletionPercent }}%</strong
+    >
+  </div>
+</div>
+
+<table class="striped" id="tasks-table">
+  <thead>
+    <th>Name</th>
+    <th>Duration</th>
+    <th>Seconds</th>
+    <th>Date</th>
+    <th></th>
+  </thead>
+  <tbody>
+    {{ range .Tasks }}
+    <tr class="task">
+      <td id="task_name">{{ .TaskName }}</td>
+      <td>{{ PrintTimeHHMMSS .ActualDurationSeconds.Int64 }}</td>
+      <td id="seconds">{{ .ActualDurationSeconds.Int64 }}</td>
+      <td style="text-align: right" class="created_at">
+        {{ .CreatedAt.Format "3:04PM" }}- {{ .FinishedAt.Time.Format "03:04PM"
+        }} {{ .CreatedAt.Format "01-02-06" }}
+      </td>
+      <td><a href="/tasks/show/{{ .TaskId }}">show</a></td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
 {{ end }}
