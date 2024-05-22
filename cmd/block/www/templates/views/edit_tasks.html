@@ -1,7 +1,7 @@
 {{ define "view" }}
 <!-- ? -->
 {{ $parsedTime := ParseTimeHHMMSS .Task.ActualDurationSeconds.Int64 }}
-<form method="post" action="/tasks/{{ .Task.TaskId }}/edit">
+<form method="post" action="/tasks/edit/{{ .Task.TaskId }}">
   <label for="taskname">Task Name</label>
   <input type="text" name="taskname" id="taskname" value="{{.Task.TaskName}}" />
 

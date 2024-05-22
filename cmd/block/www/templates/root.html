@@ -1,10 +1,12 @@
 {{ define "root" -}}
 <!doctype html>
 <html lang="en">
-  <!-- begin head -->
-  {{- template "head" . -}}
+  <head>
+    {{- template "head" . -}}
+  </head>
 
-  <!-- begin layout -->
-  {{- template "layout" . -}}
+  <body>
+    {{- template "layout" . -}}
+  </body>
 </html>
 {{ end }}

@@ -31,7 +31,7 @@ var funcMap = template.FuncMap{
 }
 
 // Routes instatiates http Handlers and associated patterns on the server.
-func (s *Server) Routes() error {
+func (s *Server) Routes() {
 	s.MuxRouter.Handle("/static/", http.StripPrefix("/static/", s.StaticContentHandler))
 	s.MuxRouter.HandleFunc("/", s.HandleHome())
 	s.MuxRouter.HandleFunc("/tasks", s.HandleTasks())
@@ -39,7 +39,6 @@ func (s *Server) Routes() error {
 	s.MuxRouter.HandleFunc("/tasks/edit/{taskId}", s.HandleEditTasks())
 	s.MuxRouter.HandleFunc("/daily/", s.HandleDaily())
 	s.MuxRouter.HandleFunc("/buckets", s.HandleBuckets())
-	return nil
 }
 
 func (s *Server) HandleHome() http.HandlerFunc {
@@ -103,7 +102,8 @@ func (s *Server) HandleEditTasks() http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("/tasks/%d/show", taskId), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("/tasks/show/%d", taskId), http.StatusSeeOther)
+			return
 		default:
 			fmt.Fprintln(w, "Unsupported request type")
 			return

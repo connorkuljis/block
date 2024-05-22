@@ -1,35 +1,16 @@
 {{ define "layout" }}
-<body hx-boost="true">
-  <div class="grid-content">
-    <div class="sidebar">{{ template "nav" . }}</div>
+<header class="container">
+  <nav>
+    <ul>
+      <li>{{ template "header" . }}</li>
+    </ul>
+    <ul>
+      {{ template "nav" . }}
+    </ul>
+  </nav>
+</header>
 
-    <div class="content">
-      <div id="main">{{ template "view" .}}</div>
-      <div>{{ template "footer" . }}</div>
-    </div>
-  </div>
-  <style>
-    this {
-      --border: 1px solid var(--pico-secondary-border);
-    }
+<main class="container" id="view">{{ template "view" . }}</main>
 
-    this .grid-content {
-      display: grid;
-      height: 100dvh;
-      grid-template-columns: repeat(10, 1fr);
-    }
-
-    this .sidebar {
-      grid-column: span 1;
-      padding: 1rem;
-      border-right: var(--border);
-    }
-
-    this .content {
-      grid-column: span 9;
-      overflow: auto;
-      padding: 1rem;
-    }
-  </style>
-</body>
+<footer class="container">{{ template "footer" . }}</footer>
 {{ end }}

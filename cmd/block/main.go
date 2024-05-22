@@ -309,10 +309,7 @@ var ServeCmd = &cli.Command{
 		staticPath := "www/static"
 		s, err := server.NewServer(embedWebContent, db, "8080", templatesPath, staticPath)
 
-		err = s.Routes()
-		if err != nil {
-			return err
-		}
+		s.Routes()
 
 		err = s.ListenAndServe()
 		if err != nil {
