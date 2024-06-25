@@ -1,0 +1,52 @@
+{{ define "view" }}
+<!-- ? -->
+{{ $parsedTime := ParseTimeHHMMSS .Task.ActualDurationSeconds.Int64 }}
+<form method="post" action="/tasks/edit/{{ .Task.TaskId }}">
+  <label for="taskname">Task Name</label>
+  <input type="text" name="taskname" id="taskname" value="{{.Task.TaskName}}" />
+
+  <fieldset>
+    <legend>Actual Duration</legend>
+    <div class="grid">
+      <div>
+        <label for="hours">Hours</label>
+        <input
+          type="number"
+          name="hours"
+          id="hours"
+          value="{{ $parsedTime.Hours }}"
+          min="0"
+          max="99"
+          required
+        />
+      </div>
+      <div>
+        <label for="minutes">Minutes</label>
+        <input
+          type="number"
+          name="minutes"
+          id="minutes"
+          value="{{ $parsedTime.Minutes }}"
+          min="0"
+          max="59"
+          required
+        />
+      </div>
+      <div>
+        <label for="seconds">Seconds</label>
+        <input
+          type="number"
+          name="seconds"
+          id="seconds"
+          value="{{ $parsedTime.Seconds }}"
+          min="0"
+          max="59"
+          required
+        />
+      </div>
+    </div>
+  </fieldset>
+
+  <input type="submit" value="Update" />
+</form>
+{{ end }}

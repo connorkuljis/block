@@ -1,0 +1,104 @@
+{{ define "tasks-table" }}
+<!-- chart -->
+<div style="height: 400px; width: 800px">
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+  var tasks = [];
+  var taskElements = document.querySelectorAll(".task");
+
+  for (let i = 0; i < taskElements.length; i++) {
+    const task = taskElements[i];
+    const taskName = task.querySelector("#task_name").textContent;
+    const seconds = task.querySelector("#seconds").textContent;
+
+    tasks.push({
+      TaskName: taskName,
+      Seconds: parseInt(seconds),
+    });
+  }
+
+  var ctx = document.getElementById("chart").getContext("2d");
+  var chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: tasks.map((task) => task.TaskName),
+      datasets: [
+        {
+          label: "Time",
+          data: tasks.map((task) => task.Seconds),
+          backgroundColor: "rgba(255, 99, 132, 0.2)",
+          borderColor: "rgba(255, 99, 132, 1)",
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        y: {
+          title: {
+            text: "Duration (seconds)",
+            display: true,
+          },
+          beginAtZero: true,
+        },
+        x: {
+          title: {
+            text: "Task Name",
+            display: true,
+          },
+        },
+      },
+      responsive: true, // enable responsive chart
+    },
+  });
+
+  tasks = [];
+</script>
+
+<div class="grid">
+  <div>
+    <h4>Total Tasks</h4>
+    <strong>{{ .TaskSummary.TaskCount }}</strong>
+  </div>
+  <div>
+    <h4>Average Time</h4>
+    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskAverageSeconds }}</strong>
+  </div>
+  <div>
+    <h4>Total Time</h4>
+    <strong>{{ PrintTimeHHMMSS .TaskSummary.TaskTotalSeconds }}</strong>
+  </div>
+  <div>
+    <h4>Average Completion</h4>
+    <strong
+      >{{ printf "%0.2f" .TaskSummary.TaskAverageCompletionPercent }}%</strong
+    >
+  </div>
+</div>
+
+<table class="striped" id="tasks-table">
+  <thead>
+    <th>Name</th>
+    <th>Duration</th>
+    <th>Seconds</th>
+    <th>Date</th>
+    <th></th>
+  </thead>
+  <tbody>
+    {{ range .Tasks }}
+    <tr class="task">
+      <td id="task_name">{{ .TaskName }}</td>
+      <td>{{ PrintTimeHHMMSS .ActualDurationSeconds.Int64 }}</td>
+      <td id="seconds">{{ .ActualDurationSeconds.Int64 }}</td>
+      <td style="text-align: right" class="created_at">
+        {{ .CreatedAt.Format "3:04PM" }}- {{ .FinishedAt.Time.Format "03:04PM"
+        }} {{ .CreatedAt.Format "01-02-06" }}
+      </td>
+      <td><a href="/tasks/show/{{ .TaskId }}">show</a></td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}

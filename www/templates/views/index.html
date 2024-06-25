@@ -1,0 +1,9 @@
+{{ define "view" }}
+<h3>Tasks</h3>
+
+<!-- task summary -->
+<div>{{ template "form-get-tasks" . }}</div>
+
+<div id="tasks_body">{{ template "tasks-table" . }}</div>
+
+{{ end }}

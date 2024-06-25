@@ -1,14 +1,16 @@
+bin = ./bin/
+
 build:
-	go build -o . ./... 
+	go build -o $(bin) .
 
 run: 
-	./block serve
+	$(bin)block serve
 
 clean:
-	rm ./block
+	rm $(bin)block
 
 install:
-	sudo cp ./block /usr/local/bin/block
+	sudo cp ./bin/block/ /usr/local/bin/block
 
 all: build run
 

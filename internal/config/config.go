@@ -28,6 +28,7 @@ func InitConfig() error {
 	if err := makeDirIfNotExists(Cfg.HiddenConfig.Path); err != nil {
 		return err
 	}
+
 	if err := makeDirIfNotExists(Cfg.RootConfig.Path); err != nil {
 		return err
 	}
