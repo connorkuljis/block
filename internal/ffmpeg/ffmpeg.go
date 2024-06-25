@@ -5,11 +5,12 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 )
 
-func RecordScreen(inputDevice string, outputPath string, stop chan int) error {
+func RecordScreen(inputDevice string, outputPath string, cancel chan bool, finish chan error, wg *sync.WaitGroup) error {
 	inputFormat := "avfoundation" // input format.
-	frameRate := "25"             // frame rate. NOTE: must be before input device.
+	frameRate := "25"             // frame rate.
 	codec := "libx264"            // codec.
 	rescale := "scale=-1:1080"    // keep scale to 1080p.
 	overwrite := "-y"             // allows overwriting existing file.
@@ -19,7 +20,7 @@ func RecordScreen(inputDevice string, outputPath string, stop chan int) error {
 
 	cmd := exec.Command("ffmpeg",
 		"-f", inputFormat,
-		"-r", frameRate,
+		"-r", frameRate, // !must be before input device.
 		"-i", inputDevice,
 		"-c:v", codec,
 		"-vf", rescale,
@@ -39,11 +40,8 @@ func RecordScreen(inputDevice string, outputPath string, stop chan int) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-
-	// Create a channel to signal when the process is done
-	done := make(chan error, 1)
 	go func() {
-		done <- cmd.Wait()
+		finish <- cmd.Wait()
 	}()
 
 	// Start a goroutine to read and log stderr
@@ -56,14 +54,16 @@ func RecordScreen(inputDevice string, outputPath string, stop chan int) error {
 
 	// Wait for either the stop signal or the process to finish
 	select {
-	case <-stop:
+	case <-cancel:
 		log.Println("Received stop signal, terminating FFmpeg")
 		if err := cmd.Process.Signal(os.Interrupt); err != nil {
 			log.Println("Failed to send interrupt signal:", err)
 			cmd.Process.Kill()
 		}
-		return <-done
-	case err := <-done:
+		wg.Done()
+		return <-finish
+	case err := <-finish:
+		wg.Done()
 		return err
 	}
 }

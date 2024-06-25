@@ -6,12 +6,10 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/connorkuljis/block-cli/internal/commands"
 	"github.com/connorkuljis/block-cli/internal/config"
 	"github.com/connorkuljis/block-cli/internal/db"
-	"github.com/connorkuljis/block-cli/internal/ffmpeg"
 
 	"github.com/urfave/cli/v2"
 )
@@ -20,26 +18,7 @@ import (
 var www embed.FS
 
 func main() {
-	stop := make(chan int, 1)
-
-	// Start the screen recording in a goroutine
-	go func() {
-		err := ffmpeg.RecordScreen("0", "output.mkv", stop)
-		if err != nil {
-			log.Println("Error in RecordScreen:", err)
-		}
-	}()
-
-	// Wait for 5 seconds
-	time.Sleep(10 * time.Second)
-
-	// Send stop signal
-	log.Println("Sending stop signal after 5 seconds")
-	stop <- 1
-
-	// Wait a bit to allow for cleanup
-	time.Sleep(1 * time.Second)
-	log.Println("Main function exiting")
+	start()
 }
 
 func start() {

@@ -8,13 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/connorkuljis/block-cli/internal/config"
-	"github.com/connorkuljis/block-cli/internal/tasks"
+	"github.com/connorkuljis/block-cli/internal/ffmpeg"
 
 	"github.com/fatih/color"
 )
@@ -27,25 +26,8 @@ func conventionalFilename(timestamp, name, filetype string) string {
 	return timestamp + seperator + strings.ReplaceAll(name, " ", concatenator) + filetype
 }
 
-type FfmpegCommandOpts struct {
-	InputFormat string
-
-	InputDevice string
-
-	FrameRate   string
-	PixelFormat string
-	Demuxer     string
-	VideoCodec  string
-
-	OutputFile string
-
-	Resolution string // linux only
-}
-
 func FfmpegCaptureScreen(remote *Remote) {
 	var filename string
-	var cmd *exec.Cmd
-	var cmdArgs []string
 
 	timestamp := remote.Task.CreatedAt.Format(TimeFormat)
 	name := remote.Task.TaskName
@@ -59,70 +41,8 @@ func FfmpegCaptureScreen(remote *Remote) {
 	recordingPath := config.GetFfmpegRecordingPath()
 	outputFile := filepath.Join(recordingPath, filename)
 
-	switch runtime.GOOS {
-	case "darwin":
-		opts := FfmpegCommandOpts{
-			InputFormat: "avfoundation",
-			InputDevice: config.GetAvfoundationDevice(),
-			FrameRate:   "30",
-			// Demuxer:     "avfoundation",
-			PixelFormat: "yuv420p",
-			VideoCodec:  "libx264",
-			OutputFile:  outputFile,
-		}
-		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
-		cmdArgs = append(cmdArgs, "-i", opts.InputDevice)
-		cmdArgs = append(cmdArgs, "-r", opts.FrameRate)
-		cmdArgs = append(cmdArgs, "-pix_fmt", opts.PixelFormat)
-		cmdArgs = append(cmdArgs, "-c:v", opts.VideoCodec)
-		cmdArgs = append(cmdArgs, opts.OutputFile)
-	case "linux":
-		log.Println("Warning. Screen capture is experiemental on linux")
-		opts := FfmpegCommandOpts{
-			InputFormat: "x11grab",
-			InputDevice: ":0,0",
-			Resolution:  "1920x1080",
-		}
-		cmdArgs = append(cmdArgs, "-f", opts.InputFormat)
-		cmdArgs = append(cmdArgs, "-i", opts.InputDevice)
-		cmdArgs = append(cmdArgs, "-framerate", opts.FrameRate)
-		cmdArgs = append(cmdArgs, "-video_size", opts.Resolution)
-		cmdArgs = append(cmdArgs, opts.OutputFile)
-	default:
-		log.Println("Screen capture is not supported on this platform. Continuing...")
-		remote.Wg.Done()
-		return
-	}
+	ffmpeg.RecordScreen(config.GetAvfoundationDevice(), outputFile, remote.Cancel, remote.Finish, remote.Wg)
 
-	cmd = exec.Command("ffmpeg", cmdArgs...)
-	log.Println(cmd.String())
-
-	// TODO: check input device is valid before forking child process.
-	if err := cmd.Start(); err != nil {
-		log.Print(err)
-		close(remote.Cancel)
-		remote.Wg.Done()
-		return
-	}
-
-	select {
-	case <-remote.Cancel:
-		terminate(cmd)
-	case <-remote.Finish:
-		terminate(cmd)
-	}
-
-	if err := cmd.Wait(); err != nil {
-		log.Print(err)
-	} else {
-		log.Print("Successfully captured screen recording at: " + outputFile)
-		if err = tasks.UpdateScreenURL(remote.Db, *remote.Task, outputFile); err != nil {
-			log.Print(err)
-		}
-	}
-
-	remote.Wg.Done()
-	return
 }
 
 func terminate(cmd *exec.Cmd) {

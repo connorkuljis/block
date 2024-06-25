@@ -20,7 +20,7 @@ type Remote struct {
 	Wg                *sync.WaitGroup
 	Pause             chan bool
 	Cancel            chan bool
-	Finish            chan bool
+	Finish            chan error
 	CompletionPercent chan float64
 	TotalTimeSeconds  chan int
 }
@@ -34,7 +34,7 @@ func Run(w io.Writer, task *tasks.Task, blocker blocker.Blocker, db *sqlx.DB) (i
 		W:                 w,
 		Pause:             make(chan bool, 1),
 		Cancel:            make(chan bool, 1),
-		Finish:            make(chan bool, 1),
+		Finish:            make(chan error, 1),
 		CompletionPercent: make(chan float64, 1),
 		TotalTimeSeconds:  make(chan int, 1),
 	}
